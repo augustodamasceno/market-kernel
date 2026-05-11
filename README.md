@@ -25,7 +25,7 @@ MarketKernel provides a robust infrastructure for handling market data with mode
 
 ## **Documentation:** 
 
-### **Online:** [augustodamasceno.org/marketkernel](augustodamasceno.org/marketkernel)
+### **Online:** [https://augustodamasceno.org/market-kernel/](https://augustodamasceno.org/market-kernel/)
 ### **Offline:** [docs/index.md](docs/index.md)
 
 ## AI Components
