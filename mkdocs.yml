@@ -92,7 +92,7 @@ plugins:
       #   Linux / FreeBSD : /usr/bin/doxygen
       #   macOS (Homebrew): /opt/homebrew/bin/doxygen
       #   Windows         : "C:\\Program Files\\doxygen\\bin\\doxygen.exe"
-      doxygen-bin-path: "C:\\Program Files\\doxygen\\bin\\doxygen.exe"
+      doxygen-bin-path: /usr/bin/doxygen
       # save-api: persist generated .md files to this directory after build.
       # Without this, markdown is written inside site/ and lost on the next build.
       save-api: "docs/"

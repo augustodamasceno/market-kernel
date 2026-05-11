@@ -1,9 +1,11 @@
-# Project Documentation
+# MarketKernel
 
-Welcome to the project documentation.
+A C++ base library for building trading indicators, strategies, and bots powered by neural networks, fuzzy logic, and genetic algorithms.
 
-- [Annotated](example/annotated.md)
-- [Classes](example/classes.md)
-- [Files](example/files.md)
-- [Functions](example/functions.md)
-- [Namespaces](example/namespaces.md)
+## API Reference
+
+- [Annotated](marketkernel/marketkernel/annotated.md)
+- [Classes](marketkernel/marketkernel/classes.md)
+- [Files](marketkernel/marketkernel/files.md)
+- [Functions](marketkernel/marketkernel/functions.md)
+- [Namespaces](marketkernel/marketkernel/namespaces.md)
