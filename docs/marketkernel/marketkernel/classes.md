@@ -4,7 +4,7 @@
 
 ## m
 
-* [**MarketData**](classmarketkernel_1_1_market_data.md)
+* [**MarketData**](classmarketkernel_1_1MarketData.md)
 ([**marketkernel**](namespacemarketkernel.md))
 
 

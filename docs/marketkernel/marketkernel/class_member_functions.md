@@ -5,72 +5,72 @@
 
 ## a
 
-* **append** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **append** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 ## c
 
-* **clear** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **clear** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 ## e
 
-* **empty** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **empty** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 ## f
 
-* **from\_csv** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **from\_csv** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 ## l
 
-* **levels** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
-* **load\_binary\_mmap** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **levels** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
+* **load\_binary\_mmap** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 ## m
 
-* **MarketData** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
-* **max\_level** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
-* **mode** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **MarketData** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
+* **max\_level** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
+* **mode** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 ## o
 
-* **orders** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **orders** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 ## p
 
-* **parse\_row\_** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
-* **peek\_csv** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
-* **prices** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **parse\_row\_** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
+* **peek\_csv** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
+* **prices** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 ## q
 
-* **quantities** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **quantities** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 ## r
 
-* **reserve** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **reserve** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 ## s
 
-* **save\_binary** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
-* **sides** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
-* **size** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
-* **symbol** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **save\_binary** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
+* **sides** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
+* **size** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
+* **symbol** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 ## t
 
-* **timestamps** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
-* **to\_csv** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
-* **to\_string** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **timestamps** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
+* **to\_csv** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
+* **to\_string** ([**marketkernel::MarketData**](classmarketkernel_1_1MarketData.md))
 
 
 

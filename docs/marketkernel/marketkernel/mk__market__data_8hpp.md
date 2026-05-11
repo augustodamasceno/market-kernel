@@ -53,7 +53,7 @@ _MarketData template class for storing and processing market ticks._
 
 | Type | Name |
 | ---: | :--- |
-| class | [**MarketData**](classmarketkernel_1_1_market_data.md) &lt;typename Num&gt;<br>_Structure-of-Arrays market tick container for low-latency bulk calculations._  |
+| class | [**MarketData**](classmarketkernel_1_1MarketData.md) &lt;typename Num&gt;<br>_Structure-of-Arrays market tick container for low-latency bulk calculations._  |
 
 
 

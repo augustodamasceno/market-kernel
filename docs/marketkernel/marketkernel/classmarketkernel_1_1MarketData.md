@@ -6,7 +6,7 @@
 
 
 
-[**ClassList**](annotated.md) **>** [**marketkernel**](namespacemarketkernel.md) **>** [**MarketData**](classmarketkernel_1_1_market_data.md)
+[**ClassList**](annotated.md) **>** [**marketkernel**](namespacemarketkernel.md) **>** [**MarketData**](classmarketkernel_1_1MarketData.md)
 
 
 
@@ -61,7 +61,7 @@ _Structure-of-Arrays market tick container for low-latency bulk calculations._ [
 |  void | [**append**](#function-append) (uint64\_t timestamp, [**Side**](namespacemarketkernel.md#enum-side) side, uint8\_t level, Num price, Num quantity, Num orders) <br>_Append one tick; silently drops the tick when level &gt; max\_level._  |
 |  void | [**clear**](#function-clear) () noexcept<br>_Clear all tick vectors; symbol, mode, and max\_level are preserved._  |
 |  bool | [**empty**](#function-empty) () noexcept const<br>_Return true when no ticks have been stored._  |
-|  bool | [**from\_csv**](#function-from_csv) (const std::string & path) <br>_Load ticks from a CSV file produced by_ [_**to\_csv()**_](classmarketkernel_1_1_market_data.md#function-to_csv) _._ |
+|  bool | [**from\_csv**](#function-from_csv) (const std::string & path) <br>_Load ticks from a CSV file produced by_ [_**to\_csv()**_](classmarketkernel_1_1MarketData.md#function-to_csv) _._ |
 |  const std::vector&lt; uint8\_t &gt; & | [**levels**](#function-levels) () noexcept const<br>_Return a const reference to the levels vector (empty in TRADE/LEVEL mode)._  |
 |  bool | [**load\_binary\_mmap**](#function-load_binary_mmap) (const std::string & path) <br>_Load a binary snapshot via memory-mapped I/O for zero-copy ingestion._  |
 |  uint8\_t | [**max\_level**](#function-max_level) () noexcept const<br>_Return the maximum accepted orderbook level._  |
@@ -123,10 +123,10 @@ Each tick field is stored in its own contiguous vector so that operations on a s
 
 
 
-Call [**reserve()**](classmarketkernel_1_1_market_data.md#function-reserve) before the session starts to avoid reallocations.
+Call [**reserve()**](classmarketkernel_1_1MarketData.md#function-reserve) before the session starts to avoid reallocations.
 
 
-Mode controls which fields are stored per [**append()**](classmarketkernel_1_1_market_data.md#function-append) call:
+Mode controls which fields are stored per [**append()**](classmarketkernel_1_1MarketData.md#function-append) call:
 * ALL: all fields stored, including level (default).
 * TRADE: level ignored and not stored; suited for trade-only feeds.
 * LIQUIDITY: all fields stored; semantically scoped to orderbook updates.
@@ -135,7 +135,7 @@ Mode controls which fields are stored per [**append()**](classmarketkernel_1_1_m
 
 
 
-max\_level controls the maximum accepted level value. [**append()**](classmarketkernel_1_1_market_data.md#function-append) is a no-op when level &gt; max\_level. Default is 4.
+max\_level controls the maximum accepted level value. [**append()**](classmarketkernel_1_1MarketData.md#function-append) is a no-op when level &gt; max\_level. Default is 4.
 
 
 
@@ -322,7 +322,7 @@ inline bool marketkernel::MarketData::empty () noexcept const
 
 ### function from\_csv 
 
-_Load ticks from a CSV file produced by_ [_**to\_csv()**_](classmarketkernel_1_1_market_data.md#function-to_csv) _._
+_Load ticks from a CSV file produced by_ [_**to\_csv()**_](classmarketkernel_1_1MarketData.md#function-to_csv) _._
 ```C++
 bool marketkernel::MarketData::from_csv (
     const std::string & path
@@ -379,7 +379,7 @@ bool marketkernel::MarketData::load_binary_mmap (
 
 
 
-Maps the file produced by [**save\_binary()**](classmarketkernel_1_1_market_data.md#function-save_binary) directly into the process address space using the OS memory-mapping facility. Where supported, the implementation requests huge / large pages to reduce TLB pressure when loading large datasets:
+Maps the file produced by [**save\_binary()**](classmarketkernel_1_1MarketData.md#function-save_binary) directly into the process address space using the OS memory-mapping facility. Where supported, the implementation requests huge / large pages to reduce TLB pressure when loading large datasets:
 
 
 
@@ -424,7 +424,7 @@ Not thread-safe: do not call concurrently with any other method.
 **Parameters:**
 
 
-* `path` Path to a binary file produced by [**save\_binary()**](classmarketkernel_1_1_market_data.md#function-save_binary). 
+* `path` Path to a binary file produced by [**save\_binary()**](classmarketkernel_1_1MarketData.md#function-save_binary). 
 
 
 
@@ -592,7 +592,7 @@ Immediately after the header come `symbol_len` raw symbol bytes (no null termina
 Each array is written in a single `std::fwrite` call, so I/O overhead is proportional to the number of arrays, not the number of ticks.
 
 
-The resulting file can be reloaded with [**load\_binary\_mmap()**](classmarketkernel_1_1_market_data.md#function-load_binary_mmap).
+The resulting file can be reloaded with [**load\_binary\_mmap()**](classmarketkernel_1_1MarketData.md#function-load_binary_mmap).
 
 
 
@@ -606,7 +606,7 @@ The file is written in the native byte order of the host. Files are not portable
 
 **Note:**
 
-Not thread-safe: do not call concurrently with [**append()**](classmarketkernel_1_1_market_data.md#function-append) or [**clear()**](classmarketkernel_1_1_market_data.md#function-clear).
+Not thread-safe: do not call concurrently with [**append()**](classmarketkernel_1_1MarketData.md#function-append) or [**clear()**](classmarketkernel_1_1MarketData.md#function-clear).
 
 
 
@@ -627,7 +627,7 @@ Not thread-safe: do not call concurrently with [**append()**](classmarketkernel_
 
 **Returns:**
 
-`false` if the container is [**empty()**](classmarketkernel_1_1_market_data.md#function-empty), the file cannot be opened, or any write call fails. 
+`false` if the container is [**empty()**](classmarketkernel_1_1MarketData.md#function-empty), the file cannot be opened, or any write call fails. 
 
 
 
@@ -721,7 +721,7 @@ The first chunk includes the header; subsequent chunks omit it.
 
 **Returns:**
 
-false if the file cannot be opened, the container is [**empty()**](classmarketkernel_1_1_market_data.md#function-empty), or chunk\_size == 0. 
+false if the file cannot be opened, the container is [**empty()**](classmarketkernel_1_1MarketData.md#function-empty), or chunk\_size == 0. 
 
 
 
@@ -750,7 +750,7 @@ std::string marketkernel::MarketData::to_string (
 Columns: symbol, mode, timestamp, side, level, price, quantity, orders. Floating-point columns use fixed notation with `decimal_places` digits (ignored for non-floating `Num`).
 
 
-Row range is half-open [start\_row, end\_row). When `end_row` equals `std::numeric_limits<std::size_t>::max()` it is treated as [**size()**](classmarketkernel_1_1_market_data.md#function-size). Returns an empty string for invalid indices.
+Row range is half-open [start\_row, end\_row). When `end_row` equals `std::numeric_limits<std::size_t>::max()` it is treated as [**size()**](classmarketkernel_1_1MarketData.md#function-size). Returns an empty string for invalid indices.
 
 
 

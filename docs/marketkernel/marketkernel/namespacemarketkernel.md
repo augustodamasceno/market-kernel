@@ -29,14 +29,14 @@
 
 | Type | Name |
 | ---: | :--- |
-| class | [**MarketData**](classmarketkernel_1_1_market_data.md) &lt;typename Num&gt;<br>_Structure-of-Arrays market tick container for low-latency bulk calculations._  |
+| class | [**MarketData**](classmarketkernel_1_1MarketData.md) &lt;typename Num&gt;<br>_Structure-of-Arrays market tick container for low-latency bulk calculations._  |
 
 
 ## Public Types
 
 | Type | Name |
 | ---: | :--- |
-| enum uint8\_t | [**MarketDataMode**](#enum-marketdatamode)  <br>_Controls which fields are stored per tick in_ [_**MarketData**_](classmarketkernel_1_1_market_data.md) _._ |
+| enum uint8\_t | [**MarketDataMode**](#enum-marketdatamode)  <br>_Controls which fields are stored per tick in_ [_**MarketData**_](classmarketkernel_1_1MarketData.md) _._ |
 | enum uint8\_t | [**Side**](#enum-side)  <br>_Order side for a market tick: buy or sell._  |
 
 
@@ -62,8 +62,8 @@
 
 | Type | Name |
 | ---: | :--- |
-|  std::ostream & | [**operator&lt;&lt;**](#function-operator) (std::ostream & os, const [**MarketData**](classmarketkernel_1_1_market_data.md)&lt; Num &gt; & md) <br> |
-|  std::istream & | [**operator&gt;&gt;**](#function-operator_1) (std::istream & is, [**MarketData**](classmarketkernel_1_1_market_data.md)&lt; Num &gt; & md) <br> |
+|  std::ostream & | [**operator&lt;&lt;**](#function-operator) (std::ostream & os, const [**MarketData**](classmarketkernel_1_1MarketData.md)&lt; Num &gt; & md) <br> |
+|  std::istream & | [**operator&gt;&gt;**](#function-operator_1) (std::istream & is, [**MarketData**](classmarketkernel_1_1MarketData.md)&lt; Num &gt; & md) <br> |
 |  Num | [**simd\_sum**](#function-simd_sum) (const std::vector&lt; Num &gt; & data) <br>_Sum all elements of a contiguous vector._  |
 |  double | [**simd\_sum&lt; double &gt;**](#function-simd_sum-double) (const std::vector&lt; double &gt; & data) <br>_AVX-accelerated double specialization of_ [_**simd\_sum()**_](namespacemarketkernel.md#function-simd_sum) _._ |
 |  float | [**simd\_sum&lt; float &gt;**](#function-simd_sum-float) (const std::vector&lt; float &gt; & data) <br>_AVX-accelerated float specialization of_ [_**simd\_sum()**_](namespacemarketkernel.md#function-simd_sum) _._ |
@@ -104,7 +104,7 @@
 
 ### enum MarketDataMode 
 
-_Controls which fields are stored per tick in_ [_**MarketData**_](classmarketkernel_1_1_market_data.md) _._
+_Controls which fields are stored per tick in_ [_**MarketData**_](classmarketkernel_1_1MarketData.md) _._
 ```C++
 enum marketkernel::MarketDataMode {
     ALL = 0,
