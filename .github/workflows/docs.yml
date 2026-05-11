@@ -15,6 +15,7 @@ on:
       - 'include/**'
       - 'docs/**'
       - 'mkdocs.yml'
+    workflow_dispatch:
 
 permissions:
   contents: read
