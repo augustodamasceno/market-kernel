@@ -1,0 +1,12 @@
+[project]
+name = "market-kernel"
+version = "0.2.0"
+description = "A C++ base library for building trading indicators, strategies, and bots powered by neural networks, fuzzy logic, and genetic algorithms."
+requires-python = ">=3.11"
+dependencies = [
+    "mkdocs-material",
+    "mkdoxy",
+    "mkdocs-llmstxt",
+]
+
+
