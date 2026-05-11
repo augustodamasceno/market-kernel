@@ -420,7 +420,7 @@ TEST(MarketDataTest, LoadFromCsvFile)
     ASSERT_TRUE(md.to_csv(path, 100));
 
     MarketData<double> md2("es", MarketDataMode::ALL);
-    ASSERT_TRUE(md2.load(path));
+    ASSERT_TRUE(md2.from_csv(path));
     std::remove(path.c_str());
 
     ASSERT_EQ(md2.size(), 2U);
@@ -433,7 +433,7 @@ TEST(MarketDataTest, LoadFromCsvFile)
 TEST(MarketDataTest, LoadReturnsFalseOnMissingFile)
 {
     MarketData<double> md("es", MarketDataMode::ALL);
-    EXPECT_FALSE(md.load("no_such_file_xyz.csv"));
+    EXPECT_FALSE(md.from_csv("no_such_file_xyz.csv"));
 }
 
 TEST(MarketDataTest, PeekCsvReturnsSymbolAndMode)
@@ -479,12 +479,185 @@ TEST(MarketDataTest, LoadSkipsBadLinesAndContinues)
     }
 
     MarketData<double> md("es", MarketDataMode::ALL);
-    ASSERT_TRUE(md.load(path));
+    ASSERT_TRUE(md.from_csv(path));
     std::remove(path.c_str());
 
     ASSERT_EQ(md.size(), 2U);
     EXPECT_EQ(md.timestamps()[0], 1ULL);
     EXPECT_EQ(md.timestamps()[1], 2ULL);
+}
+
+// ---------------------------------------------------------------------------
+// save_binary / load_binary_mmap
+// ---------------------------------------------------------------------------
+
+TEST(MarketDataBinaryTest, SaveBinaryReturnsFalseOnEmpty)
+{
+    const MarketData<double> md("es", MarketDataMode::ALL);
+    EXPECT_FALSE(md.save_binary("should_not_exist.bin"));
+}
+
+TEST(MarketDataBinaryTest, SaveBinaryReturnsFalseOnBadPath)
+{
+    MarketData<double> md("es", MarketDataMode::ALL);
+    md.append(1ULL, Side::BUY, 1U, 100.0, 5.0, 3.0);
+    EXPECT_FALSE(md.save_binary("/no_such_dir_xyz/out.bin"));
+}
+
+TEST(MarketDataBinaryTest, RoundtripAllMode)
+{
+    MarketData<double> src("nvda", MarketDataMode::ALL, 3U);
+    src.append(1000ULL, Side::BUY,  1U, 5300.25,  10.0, 3.0);
+    src.append(2000ULL, Side::SELL, 2U, 5299.50,   5.0, 1.0);
+    src.append(3000ULL, Side::BUY,  3U, 5300.00,   8.0, 2.0);
+
+    const std::string path = "test_binary_roundtrip_all.bin";
+    ASSERT_TRUE(src.save_binary(path));
+
+    MarketData<double> dst("", MarketDataMode::TRADE);
+    ASSERT_TRUE(dst.load_binary_mmap(path));
+    std::remove(path.c_str());
+
+    EXPECT_EQ(dst.symbol(),    "nvda");
+    EXPECT_EQ(dst.mode(),      MarketDataMode::ALL);
+    EXPECT_EQ(dst.max_level(), 3U);
+    ASSERT_EQ(dst.size(),      3U);
+
+    EXPECT_EQ(dst.timestamps()[0], 1000ULL);
+    EXPECT_EQ(dst.sides()[0],      Side::BUY);
+    EXPECT_EQ(dst.levels()[0],     1U);
+    EXPECT_DOUBLE_EQ(dst.prices()[0],      5300.25);
+    EXPECT_DOUBLE_EQ(dst.quantities()[0],  10.0);
+    EXPECT_DOUBLE_EQ(dst.orders()[0],       3.0);
+
+    EXPECT_EQ(dst.timestamps()[1], 2000ULL);
+    EXPECT_EQ(dst.sides()[1],      Side::SELL);
+    EXPECT_EQ(dst.levels()[1],     2U);
+    EXPECT_DOUBLE_EQ(dst.prices()[1],      5299.50);
+
+    EXPECT_EQ(dst.timestamps()[2], 3000ULL);
+    EXPECT_DOUBLE_EQ(dst.prices()[2],      5300.00);
+}
+
+TEST(MarketDataBinaryTest, RoundtripTradeModeNoLevels)
+{
+    MarketData<float> src("es", MarketDataMode::TRADE);
+    src.append(10ULL, Side::BUY,  0U, 100.5F, 10.0F, 1.0F);
+    src.append(20ULL, Side::SELL, 0U, 101.0F,  8.0F, 2.0F);
+
+    const std::string path = "test_binary_roundtrip_trade.bin";
+    ASSERT_TRUE(src.save_binary(path));
+
+    MarketData<float> dst;
+    ASSERT_TRUE(dst.load_binary_mmap(path));
+    std::remove(path.c_str());
+
+    EXPECT_EQ(dst.symbol(), "es");
+    EXPECT_EQ(dst.mode(),   MarketDataMode::TRADE);
+    ASSERT_EQ(dst.size(),   2U);
+    EXPECT_TRUE(dst.levels().empty());
+    EXPECT_FLOAT_EQ(dst.prices()[0],     100.5F);
+    EXPECT_FLOAT_EQ(dst.quantities()[0],  10.0F);
+    EXPECT_FLOAT_EQ(dst.orders()[0],       1.0F);
+    EXPECT_FLOAT_EQ(dst.prices()[1],     101.0F);
+}
+
+TEST(MarketDataBinaryTest, RoundtripLiquidityMode)
+{
+    MarketData<double> src("asml", MarketDataMode::LIQUIDITY);
+    src.append(5ULL, Side::BUY, 1U, 900.0, 20.0, 6.0);
+
+    const std::string path = "test_binary_roundtrip_liquidity.bin";
+    ASSERT_TRUE(src.save_binary(path));
+
+    MarketData<double> dst;
+    ASSERT_TRUE(dst.load_binary_mmap(path));
+    std::remove(path.c_str());
+
+    EXPECT_EQ(dst.mode(), MarketDataMode::LIQUIDITY);
+    ASSERT_EQ(dst.size(), 1U);
+    ASSERT_EQ(dst.levels().size(), 1U);
+    EXPECT_EQ(dst.levels()[0], 1U);
+    EXPECT_DOUBLE_EQ(dst.prices()[0], 900.0);
+}
+
+TEST(MarketDataBinaryTest, LoadBinaryMmapReturnsFalseOnMissingFile)
+{
+    MarketData<double> md;
+    EXPECT_FALSE(md.load_binary_mmap("no_such_file_xyz.bin"));
+}
+
+TEST(MarketDataBinaryTest, LoadBinaryMmapReturnsFalseOnWrongNumType)
+{
+    // Save as double, attempt to from_csv as float — sizeof(Num) mismatch.
+    MarketData<double> src("es", MarketDataMode::ALL);
+    src.append(1ULL, Side::BUY, 1U, 10.0, 1.0, 1.0);
+
+    const std::string path = "test_binary_wrong_num.bin";
+    ASSERT_TRUE(src.save_binary(path));
+
+    MarketData<float> dst;
+    EXPECT_FALSE(dst.load_binary_mmap(path));
+    std::remove(path.c_str());
+}
+
+TEST(MarketDataBinaryTest, LoadBinaryMmapReturnsFalseOnTruncatedFile)
+{
+    MarketData<double> src("es", MarketDataMode::ALL);
+    src.append(1ULL, Side::BUY, 1U, 10.0, 1.0, 1.0);
+
+    const std::string path = "test_binary_truncated.bin";
+    ASSERT_TRUE(src.save_binary(path));
+
+    // Truncate to 40 bytes — valid header but missing data arrays.
+    {
+        std::ofstream f(path, std::ios::in | std::ios::out | std::ios::binary);
+        f.seekp(40);
+        f.close();
+        // Resize the file by re-opening with trunc at known small size.
+        // Write only the first 40 bytes of the original.
+        std::ifstream orig(path, std::ios::binary);
+        std::vector<char> buf(40);
+        orig.read(buf.data(), 40);
+        orig.close();
+        std::ofstream out(path, std::ios::binary | std::ios::trunc);
+        out.write(buf.data(), 40);
+    }
+
+    MarketData<double> dst;
+    EXPECT_FALSE(dst.load_binary_mmap(path));
+    std::remove(path.c_str());
+}
+
+TEST(MarketDataBinaryTest, BinaryRoundtripMatchesCsvLoad)
+{
+    // Both from_csv paths must produce identical tick data.
+    MarketData<double> src("aapl", MarketDataMode::ALL);
+    src.append(100ULL, Side::BUY,  1U, 200.5,  5.0, 1.0);
+    src.append(200ULL, Side::SELL, 2U, 199.75, 10.0, 3.0);
+
+    const std::string bin_path = "test_binary_vs_csv.bin";
+    const std::string csv_path = "test_binary_vs_csv.csv";
+    ASSERT_TRUE(src.save_binary(bin_path));
+    ASSERT_TRUE(src.to_csv(csv_path, 100));
+
+    MarketData<double> from_bin("aapl", MarketDataMode::ALL);
+    MarketData<double> from_csv("aapl", MarketDataMode::ALL);
+    ASSERT_TRUE(from_bin.load_binary_mmap(bin_path));
+    ASSERT_TRUE(from_csv.from_csv(csv_path));
+    std::remove(bin_path.c_str());
+    std::remove(csv_path.c_str());
+
+    ASSERT_EQ(from_bin.size(), from_csv.size());
+    for (std::size_t i = 0; i < from_bin.size(); ++i)
+    {
+        EXPECT_EQ(from_bin.timestamps()[i], from_csv.timestamps()[i]);
+        EXPECT_EQ(from_bin.sides()[i],      from_csv.sides()[i]);
+        EXPECT_EQ(from_bin.levels()[i],     from_csv.levels()[i]);
+        EXPECT_DOUBLE_EQ(from_bin.prices()[i],     from_csv.prices()[i]);
+        EXPECT_DOUBLE_EQ(from_bin.quantities()[i], from_csv.quantities()[i]);
+        EXPECT_DOUBLE_EQ(from_bin.orders()[i],     from_csv.orders()[i]);
+    }
 }
 
 } // namespace
