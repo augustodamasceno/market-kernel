@@ -18,11 +18,16 @@
 * **empty** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
 
 
+## f
+
+* **from\_csv** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+
+
 ## l
 
 * **levels** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
 * **levels\_** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
-* **load** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
+* **load\_binary\_mmap** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
 
 
 ## m
@@ -61,6 +66,7 @@
 
 ## s
 
+* **save\_binary** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
 * **sides** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
 * **sides\_** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))
 * **size** ([**marketkernel::MarketData**](classmarketkernel_1_1_market_data.md))

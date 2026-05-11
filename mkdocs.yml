@@ -3,6 +3,13 @@ site_description: A C++ base library for building trading indicators, strategies
 site_author: Augusto Damasceno
 site_url: https://augustodamasceno.org/
 
+# docs/index.md uses on-disk paths (marketkernel/marketkernel/…) for offline
+# browsing; during the MkDocs build mkdoxy registers those same files at the
+# shorter virtual path (marketkernel/…), so suppress the resulting warnings.
+validation:
+  links:
+    not_found: ignore
+
 theme:
   name: material
   features:
@@ -40,6 +47,7 @@ nav:
     - Classes:
       - All Classes: marketkernel/classes.md
       - Class Hierarchy: marketkernel/hierarchy.md
+      - MarketData: marketkernel/classmarketkernel_1_1_market_data.md
       - Class Members: marketkernel/class_members.md
       - Member Functions: marketkernel/class_member_functions.md
       - Member Variables: marketkernel/class_member_variables.md
@@ -47,11 +55,20 @@ nav:
       - Member Enums: marketkernel/class_member_enums.md
     - Files:
       - All Files: marketkernel/files.md
+      - mk_market_data.hpp: marketkernel/mk__market__data_8hpp.md
+      - mk_market_data.hpp source: marketkernel/mk__market__data_8hpp_source.md
+      - mk_market_data_mode.h: marketkernel/mk__market__data__mode_8h.md
+      - mk_market_data_mode.h source: marketkernel/mk__market__data__mode_8h_source.md
+      - mk_math.hpp: marketkernel/mk__math_8hpp.md
+      - mk_math.hpp source: marketkernel/mk__math_8hpp_source.md
+      - mk_side.h: marketkernel/mk__side_8h.md
+      - mk_side.h source: marketkernel/mk__side_8h_source.md
     - Functions: marketkernel/functions.md
     - Variables: marketkernel/variables.md
     - Macros: marketkernel/macros.md
     - Namespaces:
       - All Namespaces: marketkernel/namespaces.md
+      - marketkernel: marketkernel/namespacemarketkernel.md
       - Namespace Members: marketkernel/namespace_members.md
       - Member Functions: marketkernel/namespace_member_functions.md
       - Member Variables: marketkernel/namespace_member_variables.md
@@ -59,6 +76,10 @@ nav:
       - Member Enums: marketkernel/namespace_member_enums.md
     - Modules: marketkernel/modules.md
     - Pages: marketkernel/pages.md
+
+not_in_nav: |
+  marketkernel/dir_*.md
+  marketkernel/links.md
 
 plugins:
   - search

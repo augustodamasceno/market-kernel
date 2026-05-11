@@ -61,14 +61,16 @@ _Structure-of-Arrays market tick container for low-latency bulk calculations._ [
 |  void | [**append**](#function-append) (uint64\_t timestamp, [**Side**](namespacemarketkernel.md#enum-side) side, uint8\_t level, Num price, Num quantity, Num orders) <br>_Append one tick; silently drops the tick when level &gt; max\_level._  |
 |  void | [**clear**](#function-clear) () noexcept<br>_Clear all tick vectors; symbol, mode, and max\_level are preserved._  |
 |  bool | [**empty**](#function-empty) () noexcept const<br>_Return true when no ticks have been stored._  |
+|  bool | [**from\_csv**](#function-from_csv) (const std::string & path) <br>_Load ticks from a CSV file produced by_ [_**to\_csv()**_](classmarketkernel_1_1_market_data.md#function-to_csv) _._ |
 |  const std::vector&lt; uint8\_t &gt; & | [**levels**](#function-levels) () noexcept const<br>_Return a const reference to the levels vector (empty in TRADE/LEVEL mode)._  |
-|  bool | [**load**](#function-load) (const std::string & path) <br>_Load ticks from a CSV file produced by_ [_**to\_csv()**_](classmarketkernel_1_1_market_data.md#function-to_csv) _._ |
+|  bool | [**load\_binary\_mmap**](#function-load_binary_mmap) (const std::string & path) <br>_Load a binary snapshot via memory-mapped I/O for zero-copy ingestion._  |
 |  uint8\_t | [**max\_level**](#function-max_level) () noexcept const<br>_Return the maximum accepted orderbook level._  |
 |  [**MarketDataMode**](namespacemarketkernel.md#enum-marketdatamode) | [**mode**](#function-mode) () noexcept const<br>_Return the storage mode._  |
 |  const std::vector&lt; Num &gt; & | [**orders**](#function-orders) () noexcept const<br>_Return a const reference to the orders vector._  |
 |  const std::vector&lt; Num &gt; & | [**prices**](#function-prices) () noexcept const<br>_Return a const reference to the prices vector._  |
 |  const std::vector&lt; Num &gt; & | [**quantities**](#function-quantities) () noexcept const<br>_Return a const reference to the quantities vector._  |
 |  void | [**reserve**](#function-reserve) (std::size\_t n) <br>_Pre-allocate capacity for_ `n` _ticks in all active field vectors._ |
+|  bool | [**save\_binary**](#function-save_binary) (const std::string & path) const<br>_Write a binary snapshot of all tick data to disk using block I/O._  |
 |  const std::vector&lt; [**Side**](namespacemarketkernel.md#enum-side) &gt; & | [**sides**](#function-sides) () noexcept const<br>_Return a const reference to the sides vector._  |
 |  std::size\_t | [**size**](#function-size) () noexcept const<br>_Return the number of stored ticks._  |
 |  std::string\_view | [**symbol**](#function-symbol) () noexcept const<br>_Return the instrument symbol._  |
@@ -111,7 +113,7 @@ _Structure-of-Arrays market tick container for low-latency bulk calculations._ [
 ## Detailed Description
 
 
-Each tick field is stored in its own contiguous vector so that operations on a single field (e.g., iterating all prices) load only the relevant data into cache and are SIMD-friendly.
+Each tick field is stored in its own contiguous vector so that operations on a single field (e.g., iterating all prices) from\_csv only the relevant data into cache and are SIMD-friendly.
 
 
 
@@ -318,25 +320,11 @@ inline bool marketkernel::MarketData::empty () noexcept const
 
 
 
-### function levels 
-
-_Return a const reference to the levels vector (empty in TRADE/LEVEL mode)._ 
-```C++
-inline const std::vector< uint8_t > & marketkernel::MarketData::levels () noexcept const
-```
-
-
-
-
-<hr>
-
-
-
-### function load 
+### function from\_csv 
 
 _Load ticks from a CSV file produced by_ [_**to\_csv()**_](classmarketkernel_1_1_market_data.md#function-to_csv) _._
 ```C++
-bool marketkernel::MarketData::load (
+bool marketkernel::MarketData::from_csv (
     const std::string & path
 ) 
 ```
@@ -355,6 +343,101 @@ The header line is skipped automatically. Lines that fail to parse are skipped; 
 **Returns:**
 
 false only when the file cannot be opened. 
+
+
+
+
+
+        
+
+<hr>
+
+
+
+### function levels 
+
+_Return a const reference to the levels vector (empty in TRADE/LEVEL mode)._ 
+```C++
+inline const std::vector< uint8_t > & marketkernel::MarketData::levels () noexcept const
+```
+
+
+
+
+<hr>
+
+
+
+### function load\_binary\_mmap 
+
+_Load a binary snapshot via memory-mapped I/O for zero-copy ingestion._ 
+```C++
+bool marketkernel::MarketData::load_binary_mmap (
+    const std::string & path
+) 
+```
+
+
+
+Maps the file produced by [**save\_binary()**](classmarketkernel_1_1_market_data.md#function-save_binary) directly into the process address space using the OS memory-mapping facility. Where supported, the implementation requests huge / large pages to reduce TLB pressure when loading large datasets:
+
+
+
+* **Linux** — POSIX `mmap(2)` with `MAP_PRIVATE`. After mapping, `madvise(2)` with `MADV_HUGEPAGE` requests Transparent Huge Page (THP) promotion (2 MB pages), and `MADV_SEQUENTIAL` enables kernel read-ahead. `MADV_HUGEPAGE` is compiled out on platforms that do not define it (macOS, older FreeBSD).
+* **macOS / FreeBSD** — same `mmap(2)` path; `MADV_SEQUENTIAL` is applied; huge-page hints are omitted where unavailable.
+* **Windows** — `CreateFileMapping` is first attempted with `SEC_LARGE_PAGES` (4 MB pages on x86-64) and `MapViewOfFile` with `FILE_MAP_LARGE_PAGES`. Both require `SeLockMemoryPrivilege`; if that privilege is not held the calls fail and the implementation retries transparently with standard 4 KB pages.
+
+
+
+
+In all cases the kernel maps file data directly from the page cache, eliminating the kernel-buffer-to-user-buffer copy of `read()` / `fread()`.
+
+
+On entry, the method validates:
+* Magic bytes `'M'`,'K','M','D' at offset 0.
+* Version byte equals `1`.
+* `sizeof(Num)` byte matches the `Num` of this instantiation; attempting to load a `double` file into a `float` instance (or vice-versa) will be rejected here.
+* File is large enough to hold all declared arrays.
+
+
+
+
+On success the existing contents of the container are replaced by the loaded data; symbol\_, mode\_, and max\_level\_ are overwritten from the header. On failure the container state is unchanged.
+
+
+
+
+**Note:**
+
+The file is assumed to be in native byte order. Files produced on a big-endian host cannot be read on a little-endian host and vice-versa. 
+
+
+
+
+**Note:**
+
+Not thread-safe: do not call concurrently with any other method.
+
+
+
+
+**Parameters:**
+
+
+* `path` Path to a binary file produced by [**save\_binary()**](classmarketkernel_1_1_market_data.md#function-save_binary). 
+
+
+
+**Returns:**
+
+`true` on success. 
+
+
+
+
+**Returns:**
+
+`false` if the file cannot be opened, the header magic or version is wrong, `sizeof(Num)` mismatches, or the file is truncated. 
 
 
 
@@ -453,6 +536,99 @@ void marketkernel::MarketData::reserve (
 
 
 * `n` Number of ticks to reserve capacity for. 
+
+
+
+
+        
+
+<hr>
+
+
+
+### function save\_binary 
+
+_Write a binary snapshot of all tick data to disk using block I/O._ 
+```C++
+bool marketkernel::MarketData::save_binary (
+    const std::string & path
+) const
+```
+
+
+
+Serialises the container to a compact binary format optimised for fast bulk reloads. The file begins with a fixed 32-byte header:
+
+
+
+|Offset  |Size  |Field  |Notes  |
+|-----|-----|-----|-----|
+|0  |4  |magic  |`'M'`,'K','M','D'  |
+|4  |1  |version  |`1`  |
+|5  |1  |sizeof(Num)  |validated on load  |
+|6  |1  |mode  |`MarketDataMode` cast to uint8\_t  |
+|7  |1  |max\_level  |uint8\_t  |
+|8  |8  |n\_ticks  |uint64\_t, native endian  |
+|16  |8  |symbol\_len  |uint64\_t  |
+|24  |1  |has\_levels  |`0` or `1`  |
+|25  |7  |reserved  |zeros  |
+
+
+
+
+
+
+Immediately after the header come `symbol_len` raw symbol bytes (no null terminator), followed by the six tick arrays written sequentially:
+* `timestamps` — `uint64_t`[n\_ticks]
+* `sides` — `Side`[n\_ticks]
+* `levels` — `uint8_t`[n\_ticks] (omitted when `has_levels` == 0)
+* `prices` — `Num`[n\_ticks]
+* `quantities` — `Num`[n\_ticks]
+* `orders` — `Num`[n\_ticks]
+
+
+
+
+Each array is written in a single `std::fwrite` call, so I/O overhead is proportional to the number of arrays, not the number of ticks.
+
+
+The resulting file can be reloaded with [**load\_binary\_mmap()**](classmarketkernel_1_1_market_data.md#function-load_binary_mmap).
+
+
+
+
+**Note:**
+
+The file is written in the native byte order of the host. Files are not portable across architectures with different endianness. 
+
+
+
+
+**Note:**
+
+Not thread-safe: do not call concurrently with [**append()**](classmarketkernel_1_1_market_data.md#function-append) or [**clear()**](classmarketkernel_1_1_market_data.md#function-clear).
+
+
+
+
+**Parameters:**
+
+
+* `path` Destination file path. An existing file is overwritten. 
+
+
+
+**Returns:**
+
+`true` on success. 
+
+
+
+
+**Returns:**
+
+`false` if the container is [**empty()**](classmarketkernel_1_1_market_data.md#function-empty), the file cannot be opened, or any write call fails. 
+
 
 
 

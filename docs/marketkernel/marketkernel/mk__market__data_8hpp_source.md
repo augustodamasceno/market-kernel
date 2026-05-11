@@ -21,6 +21,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -31,6 +33,18 @@
 #include <string_view>
 #include <type_traits>
 #include <vector>
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#else  // POSIX: Linux, macOS, FreeBSD
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif  // _WIN32
 
 #include "mk_market_data_mode.h"
 #include "mk_side.h"
@@ -75,10 +89,14 @@ public:
         std::size_t chunk_size,
         unsigned int decimal_places = 6) const;
 
-    bool load(const std::string& path);
+    bool from_csv(const std::string& path);
 
     static std::optional<std::pair<std::string, MarketDataMode>>
     peek_csv(const std::string& path);
+
+    bool save_binary(const std::string& path) const;
+
+    bool load_binary_mmap(const std::string& path);
 
     template<typename N>
     friend std::ostream& operator<<(std::ostream& os, const MarketData<N>& md);
@@ -346,7 +364,7 @@ bool MarketData<Num>::parse_row_(const std::string& line)
 }
 
 template<typename Num>
-bool MarketData<Num>::load(const std::string& path)
+bool MarketData<Num>::from_csv(const std::string& path)
 {
     std::ifstream file(path);
     if (!file.is_open())
@@ -368,7 +386,7 @@ bool MarketData<Num>::load(const std::string& path)
         std::istringstream ss(line);
         ss >> *this;
         if (ss.fail())
-            std::cerr << "[MarketData::load] parse error on line " << line_num << '\n';
+            std::cerr << "[MarketData::from_csv] parse error on line " << line_num << '\n';
     }
     return true;
 }
@@ -423,6 +441,216 @@ std::istream& operator>>(std::istream& is, MarketData<Num>& md)
             is.setstate(std::ios::failbit);
     }
     return is;
+}
+
+template<typename Num>
+bool MarketData<Num>::save_binary(const std::string& path) const
+{
+    const std::size_t n = prices_.size();
+    if (n == 0)
+        return false;
+
+    std::FILE* fp = std::fopen(path.c_str(), "wb");
+    if (!fp)
+        return false;
+
+    const uint8_t  magic[4]     = {'M', 'K', 'M', 'D'};
+    const uint8_t  version      = 1U;
+    const uint8_t  sizeof_num   = static_cast<uint8_t>(sizeof(Num));
+    const uint8_t  mode_val     = static_cast<uint8_t>(mode_);
+    const uint64_t n_ticks      = static_cast<uint64_t>(n);
+    const uint64_t sym_len      = static_cast<uint64_t>(symbol_.size());
+    const uint8_t  has_levels   = (levels_.size() == n) ? 1U : 0U;
+    const uint8_t  reserved[7]  = {};
+
+    bool ok = true;
+    ok = ok && (std::fwrite(magic,        1,              4,  fp) == 4);
+    ok = ok && (std::fwrite(&version,     1,              1,  fp) == 1);
+    ok = ok && (std::fwrite(&sizeof_num,  1,              1,  fp) == 1);
+    ok = ok && (std::fwrite(&mode_val,    1,              1,  fp) == 1);
+    ok = ok && (std::fwrite(&max_level_,  1,              1,  fp) == 1);
+    ok = ok && (std::fwrite(&n_ticks,     sizeof(n_ticks), 1, fp) == 1);
+    ok = ok && (std::fwrite(&sym_len,     sizeof(sym_len), 1, fp) == 1);
+    ok = ok && (std::fwrite(&has_levels,  1,              1,  fp) == 1);
+    ok = ok && (std::fwrite(reserved,     1,              7,  fp) == 7);
+
+    if (!symbol_.empty())
+        ok = ok && (std::fwrite(symbol_.data(), 1, symbol_.size(), fp) == symbol_.size());
+
+    ok = ok && (std::fwrite(timestamps_.data(), sizeof(uint64_t), n, fp) == n);
+    ok = ok && (std::fwrite(sides_.data(),      sizeof(Side),     n, fp) == n);
+    if (has_levels)
+        ok = ok && (std::fwrite(levels_.data(), sizeof(uint8_t),  n, fp) == n);
+    ok = ok && (std::fwrite(prices_.data(),     sizeof(Num),      n, fp) == n);
+    ok = ok && (std::fwrite(quantities_.data(), sizeof(Num),      n, fp) == n);
+    ok = ok && (std::fwrite(orders_.data(),     sizeof(Num),      n, fp) == n);
+
+    std::fclose(fp);
+    return ok;
+}
+
+template<typename Num>
+bool MarketData<Num>::load_binary_mmap(const std::string& path)
+{
+    const uint8_t* base      = nullptr;
+    std::size_t    file_size = 0U;
+
+#ifdef _WIN32
+    HANDLE hFile = ::CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                                 nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return false;
+
+    LARGE_INTEGER li{};
+    if (!::GetFileSizeEx(hFile, &li) || li.QuadPart < 32)
+    {
+        ::CloseHandle(hFile);
+        return false;
+    }
+    file_size = static_cast<std::size_t>(li.QuadPart);
+
+    // Attempt large-page file mapping (4 MB pages on x86-64).
+    // SEC_LARGE_PAGES / FILE_MAP_LARGE_PAGES require SeLockMemoryPrivilege;
+    // fall back to standard 4 KB pages silently when the privilege is absent.
+    HANDLE hMap = ::CreateFileMappingA(hFile, nullptr,
+                                       PAGE_READONLY | SEC_LARGE_PAGES, 0, 0, nullptr);
+    const bool large_pages = (hMap != nullptr);
+    if (!hMap)
+        hMap = ::CreateFileMappingA(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    ::CloseHandle(hFile);
+    if (!hMap)
+        return false;
+
+    const DWORD view_flags = large_pages
+        ? (FILE_MAP_READ | FILE_MAP_LARGE_PAGES)
+        : FILE_MAP_READ;
+    const void* const raw = ::MapViewOfFile(hMap, view_flags, 0, 0, 0);
+    ::CloseHandle(hMap);
+    if (!raw)
+        return false;
+
+    base = static_cast<const uint8_t*>(raw);
+
+#else  // POSIX: Linux, macOS, FreeBSD
+
+    const int fd = ::open(path.c_str(), O_RDONLY);
+    if (fd < 0)
+        return false;
+
+    struct stat st{};
+    if (::fstat(fd, &st) != 0 || st.st_size < 32)
+    {
+        ::close(fd);
+        return false;
+    }
+    file_size = static_cast<std::size_t>(st.st_size);
+
+    // mmap maps the file's page-cache pages directly into the process address
+    // space, eliminating the kernel-buffer-to-user-buffer copy of read().
+    void* const ptr = ::mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    ::close(fd);
+    if (ptr == MAP_FAILED)
+        return false;
+
+    // Request Transparent Huge Page (THP) promotion (2 MB pages on x86-64)
+    // to reduce TLB pressure on large datasets.  Guarded because macOS and
+    // older BSDs do not define MADV_HUGEPAGE.
+#ifdef MADV_HUGEPAGE
+    ::madvise(ptr, file_size, MADV_HUGEPAGE);
+#endif
+    ::madvise(ptr, file_size, MADV_SEQUENTIAL);
+    base = static_cast<const uint8_t*>(ptr);
+
+#endif  // _WIN32 / POSIX
+
+    // Validate header.
+    const uint8_t expected_magic[4] = {'M', 'K', 'M', 'D'};
+    const bool header_ok =
+        file_size >= 32U
+        && std::memcmp(base, expected_magic, 4) == 0
+        && base[4] == 1U
+        && base[5] == static_cast<uint8_t>(sizeof(Num));
+
+    if (!header_ok)
+    {
+#ifdef _WIN32
+        ::UnmapViewOfFile(raw);
+#else  // POSIX
+        ::munmap(ptr, file_size);
+#endif  // _WIN32
+        return false;
+    }
+
+    const uint8_t mode_val   = base[6];
+    const uint8_t max_lv     = base[7];
+    uint64_t n_ticks = 0U;
+    uint64_t sym_len = 0U;
+    std::memcpy(&n_ticks, base + 8,  sizeof(uint64_t));
+    std::memcpy(&sym_len, base + 16, sizeof(uint64_t));
+    const uint8_t has_levels = base[24];
+
+    const std::size_t data_offset  = 32U + static_cast<std::size_t>(sym_len);
+    const std::size_t levels_bytes = has_levels ? static_cast<std::size_t>(n_ticks) : 0U;
+    const std::size_t expected =
+          data_offset
+        + n_ticks * sizeof(uint64_t)
+        + n_ticks * sizeof(Side)
+        + levels_bytes
+        + n_ticks * sizeof(Num) * 3U;
+
+    if (expected > file_size)
+    {
+#ifdef _WIN32
+        ::UnmapViewOfFile(raw);
+#else  // POSIX
+        ::munmap(ptr, file_size);
+#endif  // _WIN32
+        return false;
+    }
+
+    // Populate vectors directly from the mapped pages.
+    symbol_.assign(reinterpret_cast<const char*>(base + 32),
+                   static_cast<std::size_t>(sym_len));
+    mode_      = static_cast<MarketDataMode>(mode_val);
+    max_level_ = max_lv;
+
+    const uint8_t* d = base + data_offset;
+
+    timestamps_.assign(reinterpret_cast<const uint64_t*>(d),
+                       reinterpret_cast<const uint64_t*>(d) + n_ticks);
+    d += n_ticks * sizeof(uint64_t);
+
+    sides_.assign(reinterpret_cast<const Side*>(d),
+                  reinterpret_cast<const Side*>(d) + n_ticks);
+    d += n_ticks * sizeof(Side);
+
+    if (has_levels)
+    {
+        levels_.assign(d, d + n_ticks);
+        d += n_ticks;
+    }
+    else
+    {
+        levels_.clear();
+    }
+
+    prices_.assign(reinterpret_cast<const Num*>(d),
+                   reinterpret_cast<const Num*>(d) + n_ticks);
+    d += n_ticks * sizeof(Num);
+
+    quantities_.assign(reinterpret_cast<const Num*>(d),
+                       reinterpret_cast<const Num*>(d) + n_ticks);
+    d += n_ticks * sizeof(Num);
+
+    orders_.assign(reinterpret_cast<const Num*>(d),
+                   reinterpret_cast<const Num*>(d) + n_ticks);
+
+#ifdef _WIN32
+    ::UnmapViewOfFile(raw);
+#else  // POSIX
+    ::munmap(ptr, file_size);
+#endif  // _WIN32
+    return true;
 }
 
 } // namespace marketkernel

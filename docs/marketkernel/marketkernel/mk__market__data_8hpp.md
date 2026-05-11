@@ -11,6 +11,8 @@
 _MarketData template class for storing and processing market ticks._ 
 
 * `#include <cstdint>`
+* `#include <cstdio>`
+* `#include <cstring>`
 * `#include <fstream>`
 * `#include <iostream>`
 * `#include <limits>`
@@ -21,6 +23,10 @@ _MarketData template class for storing and processing market ticks._
 * `#include <string_view>`
 * `#include <type_traits>`
 * `#include <vector>`
+* `#include <fcntl.h>`
+* `#include <sys/mman.h>`
+* `#include <sys/stat.h>`
+* `#include <unistd.h>`
 * `#include "mk_market_data_mode.h"`
 * `#include "mk_side.h"`
 
