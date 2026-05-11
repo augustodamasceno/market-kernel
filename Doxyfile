@@ -1,0 +1,19 @@
+# Extract all entities
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+
+# Input directories
+INPUT                  = include/
+RECURSIVE              = YES
+
+# XML Output (Required for Doxybook2)
+GENERATE_XML           = YES
+XML_OUTPUT             = xml
+XML_PROGRAMLISTING     = NO
+
+# Disable legacy outputs
+GENERATE_HTML          = NO
+GENERATE_LATEX         = NO
+GENERATE_RTF           = NO
+GENERATE_MAN           = NO

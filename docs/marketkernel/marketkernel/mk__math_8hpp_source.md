@@ -1,3 +1,13 @@
+
+
+# File mk\_math.hpp
+
+[**File List**](files.md) **>** [**include**](dir_d44c64559bbebec7f509842c48db8b23.md) **>** [**mk\_math.hpp**](mk__math_8hpp.md)
+
+[Go to the documentation of this file](mk__math_8hpp.md)
+
+
+```C++
 /* Market Kernel : Utilities
  *
  * Copyright (c) 2026, Augusto Damasceno. All rights reserved.
@@ -7,10 +17,6 @@
  * See (https://github.com/augustodamasceno/marketdata)
  */
 
-/**
- * @file mk_math.hpp
- * @brief SIMD-accelerated math utilities for the marketkernel namespace.
- */
 
 #pragma once
 
@@ -24,29 +30,12 @@
 
 namespace marketkernel {
 
-/**
- * @brief Sum all elements of a contiguous vector.
- *
- * @details Generic fallback uses std::accumulate (scalar, compiler
- * auto-vectorizable). Explicit specializations for @c float and @c double
- * use AVX vectorized reduction when compiled with AVX support, with a
- * scalar remainder loop for any remaining elements.
- *
- * @tparam Num Numeric element type; must support addition and zero-initialisation.
- * @param  data Input vector.
- * @return Sum of all elements, or @c Num{0} if @p data is empty.
- */
 template<typename Num>
 Num simd_sum(const std::vector<Num>& data)
 {
     return std::accumulate(data.begin(), data.end(), Num{0});
 }
 
-/**
- * @brief AVX-accelerated float specialization of simd_sum().
- * @param data Input vector of float values.
- * @return Sum of all elements, or 0.0f if @p data is empty.
- */
 template<>
 [[gnu::always_inline]]
 inline float simd_sum<float>(const std::vector<float>& data)
@@ -105,11 +94,6 @@ inline float simd_sum<float>(const std::vector<float>& data)
     return result;
 }
 
-/**
- * @brief AVX-accelerated double specialization of simd_sum().
- * @param data Input vector of double values.
- * @return Sum of all elements, or 0.0 if @p data is empty.
- */
 template<>
 [[gnu::always_inline]]
 inline double simd_sum<double>(const std::vector<double>& data)
@@ -166,3 +150,6 @@ inline double simd_sum<double>(const std::vector<double>& data)
 }
 
 } // namespace marketkernel
+```
+
+

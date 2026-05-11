@@ -1,3 +1,13 @@
+
+
+# File mk\_market\_data.hpp
+
+[**File List**](files.md) **>** [**include**](dir_d44c64559bbebec7f509842c48db8b23.md) **>** [**mk\_market\_data.hpp**](mk__market__data_8hpp.md)
+
+[Go to the documentation of this file](mk__market__data_8hpp.md)
+
+
+```C++
 /* Market Kernel : MarketData Class
  *
  * Copyright (c) 2026, Augusto Damasceno. All rights reserved.
@@ -7,10 +17,6 @@
  * See (https://github.com/augustodamasceno/marketdata)
  */
 
-/**
- * @file mk_market_data.hpp
- * @brief MarketData template class for storing and processing market ticks.
- */
 
 #pragma once
 
@@ -31,169 +37,66 @@
 
 namespace marketkernel {
 
-/**
- * @brief Structure-of-Arrays market tick container for low-latency bulk calculations.
- *
- * @details Each tick field is stored in its own contiguous vector so that
- * operations on a single field (e.g., iterating all prices) load only
- * the relevant data into cache and are SIMD-friendly.
- *
- * - level == 0: trade (last traded price/quantity).
- * - level >= 1: orderbook depth (1 = top of book, ...).
- *
- * Call reserve() before the session starts to avoid reallocations.
- *
- * Mode controls which fields are stored per append() call:
- * - ALL: all fields stored, including level (default).
- * - TRADE: level ignored and not stored; suited for trade-only feeds.
- * - LIQUIDITY: all fields stored; semantically scoped to orderbook updates.
- * - LEVEL: level ignored and not stored; suited for depth snapshots.
- *
- * max_level controls the maximum accepted level value. append() is a no-op
- * when level > max_level. Default is 4.
- *
- * @tparam Num Numeric type for price, quantity, and orders
- *             (e.g., @c float, @c double, or a user-defined fixed-point type).
- */
 template<typename Num>
 class alignas(64) MarketData
 {
 public:
-    /// @brief Default-constructs an empty container (symbol="", mode=ALL, max_level=4).
     MarketData() = default;
-    /// @brief Construct with a symbol name; mode defaults to ALL, max_level to 4.
-    /// @param symbol Instrument symbol (e.g., "es", "nvda").
     explicit MarketData(const std::string& symbol);
-    /// @brief Construct with symbol and mode; max_level defaults to 4 (0 for TRADE).
-    /// @param symbol Instrument symbol.
-    /// @param mode   Storage mode controlling which fields are kept.
     MarketData(const std::string& symbol, MarketDataMode mode);
-    /// @brief Construct with symbol, mode, and explicit max_level.
-    /// @param symbol    Instrument symbol.
-    /// @param mode      Storage mode.
-    /// @param max_level Maximum accepted orderbook level; ticks above this are dropped.
     MarketData(const std::string& symbol, MarketDataMode mode, uint8_t max_level);
 
-    /// @brief Return the instrument symbol.
     [[gnu::always_inline]] inline std::string_view symbol()    const noexcept;
-    /// @brief Return the storage mode.
     [[gnu::always_inline]] inline MarketDataMode   mode()      const noexcept;
-    /// @brief Return the maximum accepted orderbook level.
     [[gnu::always_inline]] inline uint8_t          max_level() const noexcept;
-    /// @brief Return the number of stored ticks.
     [[gnu::always_inline]] inline std::size_t      size()      const noexcept;
-    /// @brief Return true when no ticks have been stored.
     [[gnu::always_inline]] inline bool             empty()     const noexcept;
 
-    /// @brief Pre-allocate capacity for @p n ticks in all active field vectors.
-    /// @param n Number of ticks to reserve capacity for.
     void reserve(std::size_t n);
-    /**
-     * @brief Append one tick; silently drops the tick when level > max_level.
-     * @param timestamp Nanosecond epoch timestamp.
-     * @param side      Buy or sell side.
-     * @param level     Orderbook depth level (0 = trade, >= 1 = depth).
-     * @param price     Tick price.
-     * @param quantity  Tick quantity.
-     * @param orders    Number of orders at this price level.
-     */
     [[gnu::hot]] void append(uint64_t timestamp, Side side, uint8_t level,
               Num price, Num quantity, Num orders);
-    /// @brief Clear all tick vectors; symbol, mode, and max_level are preserved.
     void clear() noexcept;
 
-    /// @brief Return a const reference to the timestamps vector.
     [[gnu::always_inline, gnu::hot]] inline const std::vector<uint64_t>& timestamps()  const noexcept;
-    /// @brief Return a const reference to the sides vector.
     [[gnu::always_inline, gnu::hot]] inline const std::vector<Side>&     sides()       const noexcept;
-    /// @brief Return a const reference to the levels vector (empty in TRADE/LEVEL mode).
     [[gnu::always_inline, gnu::hot]] inline const std::vector<uint8_t>&  levels()      const noexcept;
-    /// @brief Return a const reference to the prices vector.
     [[gnu::always_inline, gnu::hot]] inline const std::vector<Num>&      prices()      const noexcept;
-    /// @brief Return a const reference to the quantities vector.
     [[gnu::always_inline, gnu::hot]] inline const std::vector<Num>&      quantities()  const noexcept;
-    /// @brief Return a const reference to the orders vector.
     [[gnu::always_inline, gnu::hot]] inline const std::vector<Num>&      orders()      const noexcept;
 
-    /**
-     * @brief Render ticks as an ASCII CSV string.
-     *
-     * @details Columns: symbol, mode, timestamp, side, level, price, quantity,
-     * orders. Floating-point columns use fixed notation with @p decimal_places
-     * digits (ignored for non-floating @c Num).
-     *
-     * Row range is half-open [start_row, end_row). When @p end_row equals
-     * @c std::numeric_limits<std::size_t>::max() it is treated as size().
-     * Returns an empty string for invalid indices.
-     *
-     * @param header         Include the header row when true (default: true).
-     * @param decimal_places Floating-point precision (default: 6).
-     * @param start_row      First row index, inclusive (default: 0).
-     * @param end_row        Past-the-end row index (default: all rows).
-     * @return CSV-formatted string, or empty string on invalid range.
-     */
     [[nodiscard]] std::string to_string(
         const bool header = true,
         const unsigned int decimal_places = 6,
         std::size_t start_row = 0U,
         std::size_t end_row = std::numeric_limits<std::size_t>::max()) const;
 
-    /**
-     * @brief Write tick data to a CSV file in chunks of @p chunk_size rows.
-     * @details The first chunk includes the header; subsequent chunks omit it.
-     * @param path           Destination file path.
-     * @param chunk_size     Number of rows per write chunk.
-     * @param decimal_places Floating-point precision (default: 6).
-     * @return false if the file cannot be opened, the container is empty(), or chunk_size == 0.
-     */
     bool to_csv(
         const std::string& path,
         std::size_t chunk_size,
         unsigned int decimal_places = 6) const;
 
-    /**
-     * @brief Load ticks from a CSV file produced by to_csv().
-     * @details The header line is skipped automatically. Lines that fail to
-     * parse are skipped; a warning is printed to stderr with the 1-based line number.
-     * @param path Path to the CSV file.
-     * @return false only when the file cannot be opened.
-     */
     bool load(const std::string& path);
 
-    /**
-     * @brief Peek at the first data row of a CSV file without loading it.
-     * @param path Path to the CSV file.
-     * @return A pair {symbol, mode} from the first data row, or @c std::nullopt
-     *         if the file cannot be opened, has no data rows, or the mode field
-     *         is not a recognised value.
-     */
     static std::optional<std::pair<std::string, MarketDataMode>>
     peek_csv(const std::string& path);
 
-    /// @brief Serialize all ticks as CSV to an output stream.
     template<typename N>
     friend std::ostream& operator<<(std::ostream& os, const MarketData<N>& md);
-    /// @brief Deserialize one CSV row from an input stream and append it.
     template<typename N>
     friend std::istream& operator>>(std::istream& is, MarketData<N>& md);
 
 private:
-    /**
-     * @brief Parse one CSV data row (no header) and call append().
-     * @param line A single CSV data row string.
-     * @return false if any field is malformed.
-     */
     bool parse_row_(const std::string& line);
 
-    std::string           symbol_;                          ///< Instrument symbol.
-    MarketDataMode        mode_      {MarketDataMode::ALL}; ///< Active storage mode.
-    uint8_t               max_level_ {4};                   ///< Maximum accepted orderbook level.
-    std::vector<uint64_t> timestamps_;                      ///< Nanosecond epoch timestamps.
-    std::vector<Side>     sides_;                           ///< Buy/sell sides.
-    std::vector<uint8_t>  levels_;                          ///< Orderbook depth levels (empty in TRADE/LEVEL mode).
-    std::vector<Num>      prices_;                          ///< Tick prices.
-    std::vector<Num>      quantities_;                      ///< Tick quantities.
-    std::vector<Num>      orders_;                          ///< Number of orders at the price level.
+    std::string           symbol_;                          
+    MarketDataMode        mode_      {MarketDataMode::ALL}; 
+    uint8_t               max_level_ {4};                   
+    std::vector<uint64_t> timestamps_;                      
+    std::vector<Side>     sides_;                           
+    std::vector<uint8_t>  levels_;                          
+    std::vector<Num>      prices_;                          
+    std::vector<Num>      quantities_;                      
+    std::vector<Num>      orders_;                          
 };
 
 template<typename Num>
@@ -523,3 +426,6 @@ std::istream& operator>>(std::istream& is, MarketData<Num>& md)
 }
 
 } // namespace marketkernel
+```
+
+

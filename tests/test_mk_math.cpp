@@ -7,6 +7,11 @@
  * See (https://github.com/augustodamasceno/marketdata)
  */
 
+/**
+ * @file test_mk_math.cpp
+ * @brief Unit tests for SIMD math utilities.
+ */
+
 #include <gtest/gtest.h>
 
 #include <numeric>

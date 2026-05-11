@@ -1,3 +1,13 @@
+
+
+# File mk\_side.h
+
+[**File List**](files.md) **>** [**include**](dir_d44c64559bbebec7f509842c48db8b23.md) **>** [**mk\_side.h**](mk__side_8h.md)
+
+[Go to the documentation of this file](mk__side_8h.md)
+
+
+```C++
 /* Market Kernel : Side Enum
  *
  * Copyright (c) 2026, Augusto Damasceno. All rights reserved.
@@ -7,10 +17,6 @@
  * See (https://github.com/augustodamasceno/marketdata)
  */
 
-/**
- * @file mk_side.h
- * @brief Side enum and string conversion helper.
- */
 
 #pragma once
 
@@ -18,19 +24,11 @@
 
 namespace marketkernel {
 
-/**
- * @brief Order side for a market tick: buy or sell.
- */
 enum class Side : uint8_t {
-    BUY  = 0, ///< Buy (bid) side.
-    SELL = 1  ///< Sell (ask) side.
+    BUY  = 0, 
+    SELL = 1  
 };
 
-/**
- * @brief Convert a Side value to its lowercase string representation.
- * @param side The Side enum value to convert.
- * @return "buy" for Side::BUY, "sell" for Side::SELL.
- */
 [[gnu::always_inline]] inline std::string_view to_string(const Side side) noexcept
 {
     return (static_cast<uint8_t>(side) & 1U) ? "sell" : "buy";
@@ -38,3 +36,6 @@ enum class Side : uint8_t {
 
 
 } // namespace marketkernel
+```
+
+

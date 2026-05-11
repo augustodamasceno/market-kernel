@@ -1,3 +1,13 @@
+# Doc Pipeline
+site/
+.venv/
+docs/*/hashChanges.yaml
+docs/*/xml/
+__pycache__/
+*.pyc
+*.pyo
+.cache/
+
 temp/
 build/
 .vscode/

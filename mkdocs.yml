@@ -1,0 +1,108 @@
+site_name: MarketKernel
+site_description: A C++ base library for building trading indicators, strategies, and bots powered by neural networks, fuzzy logic, and genetic algorithms.
+site_author: Augusto Damasceno
+site_url: https://augustodamasceno.org/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: black
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: black
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - tables
+
+nav:
+  - Home: index.md
+  - API Reference:
+    - Summary: marketkernel/annotated.md
+    - Classes:
+      - All Classes: marketkernel/classes.md
+      - Class Hierarchy: marketkernel/hierarchy.md
+      - Class Members: marketkernel/class_members.md
+      - Member Functions: marketkernel/class_member_functions.md
+      - Member Variables: marketkernel/class_member_variables.md
+      - Member Typedefs: marketkernel/class_member_typedefs.md
+      - Member Enums: marketkernel/class_member_enums.md
+    - Files:
+      - All Files: marketkernel/files.md
+    - Functions: marketkernel/functions.md
+    - Variables: marketkernel/variables.md
+    - Macros: marketkernel/macros.md
+    - Namespaces:
+      - All Namespaces: marketkernel/namespaces.md
+      - Namespace Members: marketkernel/namespace_members.md
+      - Member Functions: marketkernel/namespace_member_functions.md
+      - Member Variables: marketkernel/namespace_member_variables.md
+      - Member Typedefs: marketkernel/namespace_member_typedefs.md
+      - Member Enums: marketkernel/namespace_member_enums.md
+    - Modules: marketkernel/modules.md
+    - Pages: marketkernel/pages.md
+
+plugins:
+  - search
+  - llmstxt:
+      sections:
+        Guides:
+          - index.md
+        API Reference:
+          - marketkernel/annotated.md
+          - marketkernel/classes.md
+          - marketkernel/files.md
+          - marketkernel/functions.md
+          - marketkernel/namespaces.md
+          - marketkernel/hierarchy.md
+          - marketkernel/class_members.md
+          - marketkernel/class_member_functions.md
+          - marketkernel/class_member_variables.md
+          - marketkernel/class_member_typedefs.md
+          - marketkernel/class_member_enums.md
+          - marketkernel/namespace_members.md
+          - marketkernel/namespace_member_functions.md
+          - marketkernel/namespace_member_variables.md
+          - marketkernel/namespace_member_typedefs.md
+          - marketkernel/namespace_member_enums.md
+          - marketkernel/variables.md
+          - marketkernel/macros.md
+          - marketkernel/modules.md
+          - marketkernel/pages.md
+  - mkdoxy:
+      # doxygen-bin-path: set for your OS:
+      #   Linux / FreeBSD : /usr/bin/doxygen
+      #   macOS (Homebrew): /opt/homebrew/bin/doxygen
+      #   Windows         : "C:\\Program Files\\doxygen\\bin\\doxygen.exe"
+      doxygen-bin-path: "C:\\Program Files\\doxygen\\bin\\doxygen.exe"
+      # save-api: persist generated .md files to this directory after build.
+      # Without this, markdown is written inside site/ and lost on the next build.
+      save-api: "docs/"
+      projects:
+        marketkernel:
+          src-dirs: "include/"
+          full-doc: True
+          doxy-cfg:
+            EXTRACT_ALL: YES
+            EXTRACT_PRIVATE: NO
+            EXTRACT_STATIC: YES
+            RECURSIVE: YES
+      

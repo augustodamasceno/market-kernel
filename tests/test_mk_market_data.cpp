@@ -7,6 +7,11 @@
  * See (https://github.com/augustodamasceno/marketdata)
  */
 
+/**
+ * @file test_mk_market_data.cpp
+ * @brief Unit tests for the MarketData class.
+ */
+
 #include <gtest/gtest.h>
 
 #include <cstdint>
