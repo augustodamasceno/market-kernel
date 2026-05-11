@@ -1,0 +1,30 @@
+# Tests workflow
+#
+# Copyright (c) 2026, Augusto Damasceno.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+name: Tests
+
+on: [push]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake build-essential
+
+      - name: Configure CMake
+        run: cmake -S . -B build
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
