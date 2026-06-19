@@ -28,12 +28,21 @@ enum class Side : uint8_t {
 
 /**
  * @brief Convert a Side value to its lowercase string representation.
- * @param side The Side enum value to convert.
+ *
+ * @details Uses a branchless static lookup table indexed by the underlying
+ * integer value of the enum, avoiding conditional branch mispredictions.
+ *
+ * @param[in] side The Side enum value to convert.
  * @return "buy" for Side::BUY, "sell" for Side::SELL.
+ *
+ * @note Time Complexity: $O(1)$
+ * @note Space Complexity: $O(1)$
+ * @note Memory: Zero heap allocations.
  */
 [[gnu::always_inline]] inline std::string_view to_string(const Side side) noexcept
 {
-    return (static_cast<uint8_t>(side) & 1U) ? "sell" : "buy";
+    static constexpr std::string_view table[] = { "buy", "sell" };
+    return table[static_cast<uint8_t>(side)];
 }
 
 

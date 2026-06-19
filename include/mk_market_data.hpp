@@ -42,6 +42,7 @@
 
 #include "mk_market_data_mode.h"
 #include "mk_side.h"
+#include "mk_utils.h"
 
 namespace marketkernel {
 
@@ -102,6 +103,7 @@ public:
     /// @brief Pre-allocate capacity for @p n ticks in all active field vectors.
     /// @param n Number of ticks to reserve capacity for.
     void reserve(std::size_t n);
+
     /**
      * @brief Append one tick; silently drops the tick when level > max_level.
      * @param timestamp Nanosecond epoch timestamp.
@@ -200,7 +202,8 @@ public:
      * |      8 |    8 | n_ticks      | uint64_t, native endian            |
      * |     16 |    8 | symbol_len   | uint64_t                           |
      * |     24 |    1 | has_levels   | @c 0 or @c 1                       |
-     * |     25 |    7 | reserved     | zeros                              |
+     * |     25 |    1 | endianness   | @c 1 = little-endian, @c 0 = big-endian |
+     * |     26 |    6 | reserved     | zeros                              |
      *
      * Immediately after the header come @p symbol_len raw symbol bytes (no null
      * terminator), followed by the six tick arrays written sequentially:
@@ -271,7 +274,7 @@ public:
      * @param path Path to a binary file produced by save_binary().
      * @return @c true on success.
      * @return @c false if the file cannot be opened, the header magic or version
-     *         is wrong, @c sizeof(Num) mismatches, or the file is truncated.
+     *         is wrong, @c sizeof(Num) mismatches, endianness mismatches, or the file is truncated.
      */
     bool load_binary_mmap(const std::string& path);
 
@@ -645,7 +648,8 @@ bool MarketData<Num>::save_binary(const std::string& path) const
     const uint64_t n_ticks      = static_cast<uint64_t>(n);
     const uint64_t sym_len      = static_cast<uint64_t>(symbol_.size());
     const uint8_t  has_levels   = (levels_.size() == n) ? 1U : 0U;
-    const uint8_t  reserved[7]  = {};
+    const uint8_t  endianness      = IS_LITTLE_ENDIAN ? 1U : 0U;
+    const uint8_t  reserved[6]     = {};
 
     bool ok = true;
     ok = ok && (std::fwrite(magic,        1,              4,  fp) == 4);
@@ -656,7 +660,8 @@ bool MarketData<Num>::save_binary(const std::string& path) const
     ok = ok && (std::fwrite(&n_ticks,     sizeof(n_ticks), 1, fp) == 1);
     ok = ok && (std::fwrite(&sym_len,     sizeof(sym_len), 1, fp) == 1);
     ok = ok && (std::fwrite(&has_levels,  1,              1,  fp) == 1);
-    ok = ok && (std::fwrite(reserved,     1,              7,  fp) == 7);
+    ok = ok && (std::fwrite(&endianness,  1,              1,  fp) == 1);
+    ok = ok && (std::fwrite(reserved,     1,              6,  fp) == 6);
 
     if (!symbol_.empty())
         ok = ok && (std::fwrite(symbol_.data(), 1, symbol_.size(), fp) == symbol_.size());
@@ -748,12 +753,14 @@ bool MarketData<Num>::load_binary_mmap(const std::string& path)
 #endif  // _WIN32 / POSIX
 
     // Validate header.
-    const uint8_t expected_magic[4] = {'M', 'K', 'M', 'D'};
+    const uint8_t  expected_magic[4] = {'M', 'K', 'M', 'D'};
+    const uint8_t  native_endian = IS_LITTLE_ENDIAN ? 1U : 0U;
     const bool header_ok =
         file_size >= 32U
         && std::memcmp(base, expected_magic, 4) == 0
         && base[4] == 1U
-        && base[5] == static_cast<uint8_t>(sizeof(Num));
+        && base[5] == static_cast<uint8_t>(sizeof(Num))
+        && base[25] == native_endian;
 
     if (!header_ok)
     {

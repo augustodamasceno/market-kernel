@@ -21,6 +21,7 @@ FetchContent_MakeAvailable(googletest)
 # 3. Define test targets
 add_executable(test_mk_market_data test_mk_market_data.cpp)
 add_executable(test_mk_math test_mk_math.cpp)
+add_executable(test_mk_market_data_view test_mk_market_data_view.cpp)
 
 # 4. Linkage (Prefer GTest::gmock if you need mocking later)
 target_link_libraries(test_mk_market_data PRIVATE
@@ -31,6 +32,10 @@ target_link_libraries(test_mk_math PRIVATE
     marketkernel_lib
     GTest::gtest_main
 )
+target_link_libraries(test_mk_market_data_view PRIVATE
+    marketkernel_lib
+    GTest::gtest_main
+)
 
 # 5. Compiler Warnings & Features
 # High-quality code should enforce strict standards for trading and embedded
@@ -38,8 +43,11 @@ target_compile_features(test_mk_market_data PRIVATE cxx_std_17)
 target_compile_options(test_mk_market_data PRIVATE -Wall -Wextra -Wpedantic -Werror)
 target_compile_features(test_mk_math PRIVATE cxx_std_17)
 target_compile_options(test_mk_math PRIVATE -Wall -Wextra -Wpedantic -Werror)
+target_compile_features(test_mk_market_data_view PRIVATE cxx_std_17)
+target_compile_options(test_mk_market_data_view PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 # 6. Test Discovery
 include(GoogleTest)
 gtest_discover_tests(test_mk_market_data)
 gtest_discover_tests(test_mk_math)
+gtest_discover_tests(test_mk_market_data_view)
