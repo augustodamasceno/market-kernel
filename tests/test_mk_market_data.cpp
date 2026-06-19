@@ -16,11 +16,13 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <string>
 
 #include "mk_market_data.hpp"
+#include "mk_utils.h"
 
 namespace {
 
@@ -658,6 +660,48 @@ TEST(MarketDataBinaryTest, BinaryRoundtripMatchesCsvLoad)
         EXPECT_DOUBLE_EQ(from_bin.quantities()[i], from_csv.quantities()[i]);
         EXPECT_DOUBLE_EQ(from_bin.orders()[i],     from_csv.orders()[i]);
     }
+}
+
+TEST(MarketDataBinaryTest, LoadBinaryMmapReturnsFalseOnEndiannessMismatch)
+{
+    MarketData<double> src("es", MarketDataMode::ALL);
+    src.append(1ULL, Side::BUY, 1U, 10.0, 1.0, 1.0);
+
+    const std::string path = "test_binary_endian_mismatch.bin";
+    ASSERT_TRUE(src.save_binary(path));
+
+    // Flip the endianness byte at offset 25 to the opposite value.
+    {
+        std::fstream f(path, std::ios::in | std::ios::out | std::ios::binary);
+        ASSERT_TRUE(f.is_open());
+        f.seekp(25);
+        const uint8_t flipped = marketkernel::IS_LITTLE_ENDIAN ? 0U : 1U;
+        f.write(reinterpret_cast<const char*>(&flipped), 1);
+    }
+
+    MarketData<double> dst;
+    EXPECT_FALSE(dst.load_binary_mmap(path));
+    std::remove(path.c_str());
+}
+
+// ---------------------------------------------------------------------------
+// mk_utils.h
+// ---------------------------------------------------------------------------
+
+TEST(UtilsTest, IsLittleEndianMatchesRuntimeProbe)
+{
+    // Validate that the compile-time constant agrees with a runtime byte probe.
+    uint16_t s = 0x0001U;
+    uint8_t  b;
+    std::memcpy(&b, &s, 1);
+    const bool runtime_le = (b == 1U);
+    EXPECT_EQ(marketkernel::IS_LITTLE_ENDIAN, runtime_le);
+}
+
+TEST(UtilsTest, CheckEndiannessPasses)
+{
+    // On the native platform, check_endianness() must not abort.
+    EXPECT_NO_FATAL_FAILURE(marketkernel::check_endianness());
 }
 
 } // namespace
