@@ -11,6 +11,9 @@
 - `src/` — Implementation files
 - `tests/` — GoogleTest unit tests; test files mirror source names (e.g. `mk_math.hpp` → `test_mk_math.cpp`)
 - `engines/` — Third-party integrations: AI/ML frameworks, external libraries, and specialized computational engines
+- `examples/` — Example code and usage demonstrations
+  - `core/` — Examples using core library only
+  - `engines/` — Examples using optional engines
 
 ## Architecture & Key Decisions
 - `MarketData<Num>` is a template class parametrized on the numeric type (`float`, `double`, or user-defined fixed-point/decimal).

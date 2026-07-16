@@ -42,6 +42,9 @@ engines/           — Third-party integrations and specialized computational en
   ├── neural/      (optional) Neural networks via LibTorch
   ├── genetics/    (optional) Genetic algorithms via PyGAD
   └── fuzzy/       (optional) Fuzzy logic inference
+examples/          — Example code and usage demonstrations
+  ├── core/        Examples using core library only
+  └── engines/     Examples using optional engines
 ```
 
 **Design principle:** The core library is dependency-free and fully functional standalone. AI/ML frameworks, external computational engines, and specialized third-party integrations are isolated in `engines/` and can be optionally enabled at build time.
