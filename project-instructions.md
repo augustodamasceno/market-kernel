@@ -10,6 +10,7 @@
 - `include/` — Public headers: `mk_side.h` (Side enum), `mk_math.hpp` (Math utils)
 - `src/` — Implementation files
 - `tests/` — GoogleTest unit tests; test files mirror source names (e.g. `mk_math.hpp` → `test_mk_math.cpp`)
+- `engines/` — Third-party integrations: AI/ML frameworks, external libraries, and specialized computational engines
 
 ## Architecture & Key Decisions
 - `MarketData<Num>` is a template class parametrized on the numeric type (`float`, `double`, or user-defined fixed-point/decimal).
@@ -31,9 +32,23 @@
 - Test files follow the prefix rule: `test_<module>.cpp` (e.g. `test_mk_math.cpp`).
 - Headers in `include/`, implementations in `src/`, tests in `tests/`
 
+## Engines: Third-Party Integrations
+**Engines** are optional, specialized components that integrate external frameworks, AI/ML libraries, and computational engines. Unlike core modules, engines:
+- **May depend on third-party libraries and frameworks** (e.g., PyTorch, TensorFlow, QuantLib, SWIG)
+- **Are placed in the `engines/` directory** with self-contained subdirectories (e.g. `engines/neural/`, `engines/genetics/`)
+- **Each engine is independently versioned and tested** (may have its own CMakeLists.txt, requirements.txt, or build system)
+- **Optional integration**: Engines can be enabled/disabled at build time; the core library functions independently
+- **Different naming conventions**: Engine-specific modules may use their framework's conventions rather than the `mk_` prefix
+
+Examples:
+- `engines/neural/` — Neural network training and inference via LibTorch
+- `engines/genetics/` — Evolutionary optimization via PyGAD or similar
+- `engines/fuzzy/` — Fuzzy logic inference engine
+
 ## AI & Computational Intelligence
 - Neural networks, fuzzy logic systems, and genetic algorithms are first-class citizens in this project and will be used to implement indicators, strategies, and bots.
-- AI components follow the same coding standards, file naming (`mk_` prefix), and test coverage requirements as all other modules.
+- **Core AI modules** (in `include/` and `src/`) follow the same coding standards, file naming (`mk_` prefix), and test coverage as all other modules.
+- **AI Engines** (in `engines/`) may integrate external frameworks and are subject to relaxed dependency constraints (see Engines section above).
 
 ## Out of Scope
 - Do not add logging frameworks or external utility libraries without approval.

@@ -2,7 +2,7 @@
 
 # **MarketKernel**
 
-*A C++ base library for building trading indicators, strategies, and bots powered by neural networks, fuzzy logic, and genetic algorithms.*
+### *A C++ base library for building trading indicators, strategies, and bots powered by neural networks, fuzzy logic, and genetic algorithms.*
 
 <p>
   <a href="#"><img alt="License" src="https://img.shields.io/badge/License-BSD_2--Clause-orange.svg"></a>
@@ -28,15 +28,37 @@ MarketKernel provides a robust infrastructure for handling market data with mode
 ### **Online:** [https://augustodamasceno.org/market-kernel/](https://augustodamasceno.org/market-kernel/)
 ### **Offline:** [docs/index.md](docs/index.md)
 
+---
+
+## **Project Structure**
+
+The library is organized into **core modules** and **optional engines**:
+
+```
+include/           — Public headers (core library, zero external dependencies)
+src/               — Implementation files (core library)
+tests/             — Unit tests for core modules
+engines/           — Third-party integrations and specialized computational engines (optional)
+  ├── neural/      (optional) Neural networks via LibTorch
+  ├── genetics/    (optional) Genetic algorithms via PyGAD
+  └── fuzzy/       (optional) Fuzzy logic inference
+```
+
+**Design principle:** The core library is dependency-free and fully functional standalone. AI/ML frameworks, external computational engines, and specialized third-party integrations are isolated in `engines/` and can be optionally enabled at build time.
+
+---
+
 ## AI Components
 
-### Neural Networks
+AI/ML frameworks are integrated as optional **engines** that can be selectively enabled at build time.
+
+### Neural Networks (`engines/neural/`)
 [LibTorch](https://pytorch.org/cppdocs/) (PyTorch C++ API) is used for neural network training and inference directly in C++.
 
-### Genetic Algorithms
+### Genetic Algorithms (`engines/genetics/`)
 Genetic algorithm optimisation is handled via a C++/Python interface with [PyGAD](https://pygad.readthedocs.io/). Strategy parameters and fitness evaluation run on the C++ side; PyGAD drives the evolutionary loop over the Python bridge.
 
-### Fuzzy Logic
+### Fuzzy Logic (`engines/fuzzy/`)
 Fuzzy logic support is planned for a future version.
 
 ---
