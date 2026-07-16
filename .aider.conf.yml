@@ -1,0 +1,21 @@
+version: 1
+
+core:
+  read_before_task: true
+  single_source_of_truth: true
+  do_not_duplicate: true
+
+files:
+  required:
+    - instructions.md
+    - project-instructions.md
+
+project_instructions:
+  file: project-instructions.md
+  ignore_if_placeholder: "<PROJECT_NAME>"
+
+languages:
+  include_only_used: true
+  files:
+    cpp:
+      - instructions-language-cpp.md

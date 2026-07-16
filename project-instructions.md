@@ -7,12 +7,12 @@
 - **Platform(s):** Cross-platform — Linux x86_64, Windows, macOS
 
 ## Repository Structure
-- `include/` — Public headers: `mk_side.h` (Side enum), `mk_market_data.h` (MarketData class)
-- `src/` — Implementation files: `mk_market_data.cpp`
-- `tests/` — GoogleTest unit tests; test files mirror source names (e.g. `mk_market_data.cpp` → `mk_test_market_data.cpp`)
+- `include/` — Public headers: `mk_side.h` (Side enum), `mk_math.hpp` (Math utils)
+- `src/` — Implementation files
+- `tests/` — GoogleTest unit tests; test files mirror source names (e.g. `mk_math.hpp` → `test_mk_math.cpp`)
 
 ## Architecture & Key Decisions
-- `MarketData<Num>` is a template class parametrized on the numeric type (`float`, `double`, or user-defined fixed-point/decimal). Explicit instantiations for `float` and `double` live in `mk_market_data.cpp`.
+- `MarketData<Num>` is a template class parametrized on the numeric type (`float`, `double`, or user-defined fixed-point/decimal).
 - Fields are stored in a Structure-of-Arrays (SoA) layout — each field (`timestamps`, `sides`, `levels`, `prices`, `quantities`, `orders`) is a separate contiguous vector for cache-efficient bulk calculations.
 - `level == 0` means a trade; `level >= 1` means orderbook depth. Do not change this convention.
 - Preferred compiler is **GCC**; other compilers (Clang, MSVC) are supported but GCC is the primary target.
@@ -23,12 +23,12 @@
 - C++17 standard; no compiler extensions (`CMAKE_CXX_EXTENSIONS OFF`).
 - Primary compiler target is GCC; for hot SIMD routines, keep `[[gnu::always_inline]]` on explicit performance-critical functions such as `simd_sum<float>` and `simd_sum<double>`.
 - No external runtime dependencies beyond the C++ standard library. GoogleTest is a test-only dependency.
-- Each production module/source should have a mirrored test file in `tests/` named `mk_test_<module>.cpp` (for example, `src/mk_math_utils.cpp` -> `tests/mk_test_math_utils.cpp`).
+- Each production module/source should have a mirrored test file in `tests/` named `test_<module>.cpp` (for example, `include/mk_math.hpp` -> `tests/test_mk_math.cpp`).
 - All new public API functions must be covered by unit tests in their mirrored module test file.
 
 ## Naming & File Conventions
-- All source files (headers and implementations) must be prefixed with `mk_` (e.g. `mk_market_data.h`, `mk_market_data.cpp`).
-- Test files follow the same prefix rule: `mk_test_<module>.cpp` (e.g. `mk_test_market_data.cpp`).
+- All source files (headers and implementations) must be prefixed with `mk_` (e.g. `mk_math.hpp`, `mk_utils.cpp`).
+- Test files follow the prefix rule: `test_<module>.cpp` (e.g. `test_mk_math.cpp`).
 - Headers in `include/`, implementations in `src/`, tests in `tests/`
 
 ## AI & Computational Intelligence
