@@ -48,6 +48,9 @@ nav:
       - All Classes: marketkernel/classes.md
       - Class Hierarchy: marketkernel/hierarchy.md
       - MarketData: marketkernel/classmarketkernel_1_1_market_data.md
+      - MarketDataView: marketkernel/classmarketkernel_1_1_market_data_view.md
+      - Span: marketkernel/classmarketkernel_1_1_span.md
+      - Tick: marketkernel/classmarketkernel_1_1_tick.md
       - Class Members: marketkernel/class_members.md
       - Member Functions: marketkernel/class_member_functions.md
       - Member Variables: marketkernel/class_member_variables.md
