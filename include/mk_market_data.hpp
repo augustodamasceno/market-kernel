@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <charconv>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -23,6 +24,7 @@
 #include <iomanip>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -42,6 +44,7 @@
 
 #include "mk_market_data_mode.h"
 #include "mk_side.h"
+#include "mk_tick.hpp"
 #include "mk_utils.h"
 
 namespace marketkernel {
@@ -132,6 +135,47 @@ public:
     [[gnu::always_inline, gnu::hot]] inline const std::vector<Num>&      orders()      const noexcept;
 
     /**
+     * @brief Return an aggregate Tick view composed from all SoA arrays at index @p i.
+     *
+     * @details No bounds checking; index must be in [0, size()).
+     * Tick is a temporary value type, not a reference.
+     *
+     * @param i Index in [0, size()).
+     * @return Tick with all fields copied from the SoA arrays.
+     *
+     * @note Time Complexity: $O(1)$ (six array lookups).
+     */
+    [[gnu::always_inline]] inline Tick<Num> operator[](std::size_t i) const noexcept
+    {
+        return Tick<Num>{
+            timestamps_[i],
+            sides_[i],
+            levels_.empty() ? uint8_t{0} : levels_[i],
+            prices_[i],
+            quantities_[i],
+            orders_[i]
+        };
+    }
+
+    /**
+     * @brief Return an aggregate Tick view at index @p i with bounds checking.
+     *
+     * @details Throws std::out_of_range if @p i >= size().
+     *
+     * @param i Index in [0, size()).
+     * @return Tick with all fields copied from the SoA arrays.
+     * @throw std::out_of_range if @p i >= size().
+     *
+     * @note Time Complexity: $O(1)$ (six array lookups).
+     */
+    inline Tick<Num> at(std::size_t i) const
+    {
+        if (i >= size())
+            throw std::out_of_range("MarketData::at: index out of range");
+        return (*this)[i];
+    }
+
+    /**
      * @brief Render ticks as an ASCII CSV string.
      *
      * @details Columns: symbol, mode, timestamp, side, level, price, quantity,
@@ -195,7 +239,7 @@ public:
      * | Offset | Size | Field        | Notes                              |
      * |-------:|-----:|:-------------|:-----------------------------------|
      * |      0 |    4 | magic        | @c 'M','K','M','D'                 |
-     * |      4 |    1 | version      | @c 1                               |
+     * |      4 |    1 | version      | @c 2                               |
      * |      5 |    1 | sizeof(Num)  | validated on load                  |
      * |      6 |    1 | mode         | @c MarketDataMode cast to uint8_t  |
      * |      7 |    1 | max_level    | uint8_t                            |
@@ -206,7 +250,9 @@ public:
      * |     26 |    6 | reserved     | zeros                              |
      *
      * Immediately after the header come @p symbol_len raw symbol bytes (no null
-     * terminator), followed by the six tick arrays written sequentially:
+     * terminator), followed by zero-fill padding to the next 8-byte
+     * (@c alignof(uint64_t)) boundary, then the six tick arrays written
+     * sequentially:
      *   - @c timestamps  — @c uint64_t[n_ticks]
      *   - @c sides       — @c Side[n_ticks]
      *   - @c levels      — @c uint8_t[n_ticks]  (omitted when @c has_levels == 0)
@@ -256,7 +302,7 @@ public:
      *
      * On entry, the method validates:
      *   -# Magic bytes @c 'M','K','M','D' at offset 0.
-     *   -# Version byte equals @c 1.
+     *   -# Version byte equals @c 2.
      *   -# @c sizeof(Num) byte matches the @c Num of this instantiation;
      *      attempting to load a @c double file into a @c float instance (or
      *      vice-versa) will be rejected here.
@@ -361,6 +407,11 @@ void MarketData<Num>::reserve(std::size_t n)
 {
     timestamps_.reserve(n);
     sides_.reserve(n);
+    // Store levels only in ALL and LIQUIDITY modes.
+    // TRADE and LEVEL both omit levels for different semantic reasons:
+    //   - TRADE: level is meaningless for a trade (no orderbook context).
+    //   - LEVEL: per-level identity is irrelevant for certain calculations.
+    // Keep these as distinct enum values; see mk_market_data_mode.h for details.
     if (mode_ == MarketDataMode::ALL || mode_ == MarketDataMode::LIQUIDITY)
         levels_.reserve(n);
     prices_.reserve(n);
@@ -376,6 +427,9 @@ void MarketData<Num>::append(uint64_t timestamp, Side side, uint8_t level,
         return;
     timestamps_.push_back(timestamp);
     sides_.push_back(side);
+    // Store level only in ALL and LIQUIDITY modes.
+    // TRADE and LEVEL both intentionally omit levels (distinct enum values
+    // for semantic clarity and extensibility; see mk_market_data_mode.h).
     if (mode_ == MarketDataMode::ALL || mode_ == MarketDataMode::LIQUIDITY)
         levels_.push_back(level);
     prices_.push_back(price);
@@ -519,31 +573,44 @@ bool MarketData<Num>::parse_row_(const std::string& line)
     if (!orders_str.empty() && orders_str.back() == '\r')
         orders_str.pop_back();
 
+    // Parse timestamp using std::from_chars (faster than std::stoull).
     uint64_t timestamp = 0U;
-    try { timestamp = std::stoull(ts_str); } catch (...) { return false; }
+    {
+        const auto result = std::from_chars(ts_str.data(), ts_str.data() + ts_str.size(),
+                                            timestamp, 10);
+        if (result.ec != std::errc()) return false;
+    }
 
     Side side;
     if      (side_str == "buy")  side = Side::BUY;
     else if (side_str == "sell") side = Side::SELL;
     else return false;
 
+    // Parse level using std::from_chars (faster than std::stoul with exception handling).
     uint8_t level = 0U;
     if (!level_str.empty())
     {
-        try
-        {
-            const unsigned long lv = std::stoul(level_str);
-            if (lv > 255UL) return false;
-            level = static_cast<uint8_t>(lv);
-        }
-        catch (...) { return false; }
+        unsigned long lv = 0UL;
+        const auto result = std::from_chars(level_str.data(), level_str.data() + level_str.size(),
+                                            lv, 10);
+        if (result.ec != std::errc() || lv > 255UL) return false;
+        level = static_cast<uint8_t>(lv);
     }
 
+    // Parse numeric fields using std::from_chars (faster than istringstream >> operator).
     Num price{}, quantity{}, orders_val{};
     {
-        std::istringstream sp(price_str);   sp >> price;      if (sp.fail()) return false;
-        std::istringstream sq(qty_str);     sq >> quantity;   if (sq.fail()) return false;
-        std::istringstream so(orders_str);  so >> orders_val; if (so.fail()) return false;
+        auto result = std::from_chars(price_str.data(), price_str.data() + price_str.size(),
+                                       price);
+        if (result.ec != std::errc()) return false;
+
+        result = std::from_chars(qty_str.data(), qty_str.data() + qty_str.size(),
+                                  quantity);
+        if (result.ec != std::errc()) return false;
+
+        result = std::from_chars(orders_str.data(), orders_str.data() + orders_str.size(),
+                                  orders_val);
+        if (result.ec != std::errc()) return false;
     }
 
     append(timestamp, side, level, price, quantity, orders_val);
@@ -642,7 +709,7 @@ bool MarketData<Num>::save_binary(const std::string& path) const
         return false;
 
     const uint8_t  magic[4]     = {'M', 'K', 'M', 'D'};
-    const uint8_t  version      = 1U;
+    const uint8_t  version      = 2U;
     const uint8_t  sizeof_num   = static_cast<uint8_t>(sizeof(Num));
     const uint8_t  mode_val     = static_cast<uint8_t>(mode_);
     const uint64_t n_ticks      = static_cast<uint64_t>(n);
@@ -665,6 +732,17 @@ bool MarketData<Num>::save_binary(const std::string& path) const
 
     if (!symbol_.empty())
         ok = ok && (std::fwrite(symbol_.data(), 1, symbol_.size(), fp) == symbol_.size());
+
+    // Pad to the next alignof(uint64_t) boundary so every SoA array starts
+    // at a naturally aligned offset; eliminates UB from unaligned pointer casts.
+    const std::size_t data_offset =
+        align_up(32U + symbol_.size(), alignof(uint64_t));
+    const std::size_t pad_bytes = data_offset - 32U - symbol_.size();
+    if (pad_bytes > 0U)
+    {
+        static constexpr uint8_t kZeroPad[8] = {};
+        ok = ok && (std::fwrite(kZeroPad, 1U, pad_bytes, fp) == pad_bytes);
+    }
 
     ok = ok && (std::fwrite(timestamps_.data(), sizeof(uint64_t), n, fp) == n);
     ok = ok && (std::fwrite(sides_.data(),      sizeof(Side),     n, fp) == n);
@@ -689,6 +767,13 @@ bool MarketData<Num>::load_binary_mmap(const std::string& path)
                                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE)
         return false;
+
+    // Reject non-disk file objects (pipes, devices) before mapping.
+    if (::GetFileType(hFile) != FILE_TYPE_DISK)
+    {
+        ::CloseHandle(hFile);
+        return false;
+    }
 
     LARGE_INTEGER li{};
     if (!::GetFileSizeEx(hFile, &li) || li.QuadPart < 32)
@@ -732,6 +817,12 @@ bool MarketData<Num>::load_binary_mmap(const std::string& path)
         ::close(fd);
         return false;
     }
+    // Reject FIFOs, character devices, and sockets; mmap requires a regular file.
+    if (!S_ISREG(st.st_mode))
+    {
+        ::close(fd);
+        return false;
+    }
     file_size = static_cast<std::size_t>(st.st_size);
 
     // mmap maps the file's page-cache pages directly into the process address
@@ -758,7 +849,7 @@ bool MarketData<Num>::load_binary_mmap(const std::string& path)
     const bool header_ok =
         file_size >= 32U
         && std::memcmp(base, expected_magic, 4) == 0
-        && base[4] == 1U
+        && base[4] == 2U
         && base[5] == static_cast<uint8_t>(sizeof(Num))
         && base[25] == native_endian;
 
@@ -780,7 +871,8 @@ bool MarketData<Num>::load_binary_mmap(const std::string& path)
     std::memcpy(&sym_len, base + 16, sizeof(uint64_t));
     const uint8_t has_levels = base[24];
 
-    const std::size_t data_offset  = 32U + static_cast<std::size_t>(sym_len);
+    const std::size_t data_offset  = align_up(32U + static_cast<std::size_t>(sym_len),
+                                              alignof(uint64_t));
     const std::size_t levels_bytes = has_levels ? static_cast<std::size_t>(n_ticks) : 0U;
     const std::size_t expected =
           data_offset

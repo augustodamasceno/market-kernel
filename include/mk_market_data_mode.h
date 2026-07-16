@@ -32,6 +32,17 @@ namespace marketkernel {
  * - LEVEL: orderbook depth ticks; level field is ignored and not stored;
  *          use when per-level identity is irrelevant (e.g., mid-price,
  *          spread calculations) or to store a single level such as BBO.
+ *
+ * @note **TRADE vs LEVEL:** Both modes omit the level field from storage.
+ *       They are kept as distinct enum values for semantic clarity: @c TRADE
+ *       represents trade-only market data semantics (the level is meaningless
+ *       for a trade), while @c LEVEL represents orderbook depth semantics
+ *       (the level is irrelevant for certain calculations).  Do not merge
+ *       these into a single value; keeping them separate aids code readability,
+ *       prevents confusion in strategy implementations, and enables future
+ *       extensions (e.g. different compression strategies, serialization formats,
+ *       or mode-specific validation rules) without structural refactoring.
+ *       See project-instructions.md "Out of Scope" for design stability policy.
  */
 enum class MarketDataMode : uint8_t {
     ALL       = 0, ///< All fields stored (timestamp, side, level, price, quantity, orders).

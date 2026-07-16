@@ -373,4 +373,160 @@ TEST(MarketDataViewTest, TemplateAlgorithmWorksWithBothTypes)
     std::remove(path.c_str());
 }
 
+// ---------------------------------------------------------------------------
+// Round-trip cross-checks: load_binary_mmap vs MarketDataView must agree
+// tick-for-tick on the same file.  Symbols are chosen so that sym_len % 8 != 0
+// ("es" = 2 bytes, "nvda" = 4 bytes) — the precise case where a missing
+// align_up in the view's header parser causes misaligned array reads.
+// ---------------------------------------------------------------------------
+
+TEST(MarketDataViewTest, RoundTripAllModeNonAlignedSymbol)
+{
+    const std::string path = temp_path("roundtrip_all_es.mkmd");
+
+    // Build source data.
+    MarketData<double> src("es", MarketDataMode::ALL, 4U);
+    src.append(1000ULL, Side::BUY,  1U, 5300.25, 10.0, 3.0);
+    src.append(1001ULL, Side::SELL, 2U, 5299.00,  5.0, 1.0);
+    src.append(1002ULL, Side::BUY,  0U, 5300.50,  2.0, 0.0);
+    ASSERT_TRUE(src.save_binary(path));
+
+    // Load via load_binary_mmap.
+    MarketData<double> mmap_md;
+    ASSERT_TRUE(mmap_md.load_binary_mmap(path));
+
+    // Load via MarketDataView.
+    const MarketDataView<double> view(path);
+    ASSERT_TRUE(view.valid());
+
+    // Both readers must agree on metadata.
+    ASSERT_EQ(mmap_md.size(), src.size());
+    ASSERT_EQ(view.size(),    src.size());
+    EXPECT_EQ(mmap_md.symbol(),    src.symbol());
+    EXPECT_EQ(view.symbol(),       src.symbol());
+    EXPECT_EQ(mmap_md.mode(),      src.mode());
+    EXPECT_EQ(view.mode(),         src.mode());
+    EXPECT_EQ(mmap_md.max_level(), src.max_level());
+    EXPECT_EQ(view.max_level(),    src.max_level());
+
+    // Both readers must agree on every field of every tick.
+    const std::size_t n = src.size();
+    for (std::size_t i = 0U; i < n; ++i)
+    {
+        EXPECT_EQ(mmap_md.timestamps()[i], view.timestamps()[i]) << "tick " << i;
+        EXPECT_EQ(mmap_md.sides()[i],      view.sides()[i])      << "tick " << i;
+        EXPECT_EQ(mmap_md.levels()[i],     view.levels()[i])     << "tick " << i;
+        EXPECT_DOUBLE_EQ(mmap_md.prices()[i],     view.prices()[i])     << "tick " << i;
+        EXPECT_DOUBLE_EQ(mmap_md.quantities()[i], view.quantities()[i]) << "tick " << i;
+        EXPECT_DOUBLE_EQ(mmap_md.orders()[i],     view.orders()[i])     << "tick " << i;
+    }
+
+    std::remove(path.c_str());
+}
+
+TEST(MarketDataViewTest, RoundTripTradeModeNonAlignedSymbol)
+{
+    const std::string path = temp_path("roundtrip_trade_nvda.mkmd");
+
+    // "nvda" is 4 bytes — sym_len % 8 == 4, so unaligned without align_up.
+    MarketData<double> src("nvda", MarketDataMode::TRADE);
+    src.append(2000ULL, Side::BUY,  0U, 180.50, 100.0, 10.0);
+    src.append(2001ULL, Side::SELL, 0U, 180.25,  50.0,  5.0);
+    src.append(2002ULL, Side::BUY,  0U, 180.75,  20.0,  2.0);
+    ASSERT_TRUE(src.save_binary(path));
+
+    // Load via load_binary_mmap.
+    MarketData<double> mmap_md;
+    ASSERT_TRUE(mmap_md.load_binary_mmap(path));
+
+    // Load via MarketDataView.
+    const MarketDataView<double> view(path);
+    ASSERT_TRUE(view.valid());
+
+    // Metadata.
+    ASSERT_EQ(mmap_md.size(), src.size());
+    ASSERT_EQ(view.size(),    src.size());
+    EXPECT_EQ(mmap_md.symbol(), src.symbol());
+    EXPECT_EQ(view.symbol(),    src.symbol());
+    EXPECT_EQ(mmap_md.mode(),   MarketDataMode::TRADE);
+    EXPECT_EQ(view.mode(),      MarketDataMode::TRADE);
+
+    // TRADE mode: levels must be absent in both readers.
+    EXPECT_TRUE(mmap_md.levels().empty());
+    EXPECT_TRUE(view.levels().empty());
+
+    // Tick-for-tick agreement.
+    const std::size_t n = src.size();
+    for (std::size_t i = 0U; i < n; ++i)
+    {
+        EXPECT_EQ(mmap_md.timestamps()[i], view.timestamps()[i]) << "tick " << i;
+        EXPECT_EQ(mmap_md.sides()[i],      view.sides()[i])      << "tick " << i;
+        EXPECT_DOUBLE_EQ(mmap_md.prices()[i],     view.prices()[i])     << "tick " << i;
+        EXPECT_DOUBLE_EQ(mmap_md.quantities()[i], view.quantities()[i]) << "tick " << i;
+        EXPECT_DOUBLE_EQ(mmap_md.orders()[i],     view.orders()[i])     << "tick " << i;
+    }
+
+    std::remove(path.c_str());
+}
+
+TEST(MarketDataViewTest, TickAggregateAccessor)
+{
+    const std::string path = temp_path("tick_accessor.mkmd");
+    MarketData<double> src("es", MarketDataMode::ALL, 4U);
+    src.append(1000ULL, Side::BUY,  1U, 5300.25, 10.0, 3.0);
+    src.append(1001ULL, Side::SELL, 2U, 5299.00,  5.0, 1.0);
+    src.append(1002ULL, Side::BUY,  0U, 5300.50,  2.0, 0.0);
+    ASSERT_TRUE(src.save_binary(path));
+
+    // Test MarketData operator[] and at().
+    {
+        auto tick0 = src[0];
+        EXPECT_EQ(tick0.timestamp, 1000ULL);
+        EXPECT_EQ(tick0.side,      Side::BUY);
+        EXPECT_EQ(tick0.level,     1U);
+        EXPECT_DOUBLE_EQ(tick0.price,     5300.25);
+        EXPECT_DOUBLE_EQ(tick0.quantity, 10.0);
+        EXPECT_DOUBLE_EQ(tick0.orders,    3.0);
+
+        auto tick1 = src.at(1);
+        EXPECT_EQ(tick1.timestamp, 1001ULL);
+        EXPECT_EQ(tick1.side,      Side::SELL);
+        EXPECT_EQ(tick1.level,     2U);
+        EXPECT_DOUBLE_EQ(tick1.price,     5299.00);
+        EXPECT_DOUBLE_EQ(tick1.quantity, 5.0);
+        EXPECT_DOUBLE_EQ(tick1.orders,    1.0);
+    }
+
+    // Test MarketDataView operator[] and at().
+    {
+        const MarketDataView<double> view(path);
+        ASSERT_TRUE(view.valid());
+
+        auto tick0 = view[0];
+        EXPECT_EQ(tick0.timestamp, 1000ULL);
+        EXPECT_EQ(tick0.side,      Side::BUY);
+        EXPECT_EQ(tick0.level,     1U);
+        EXPECT_DOUBLE_EQ(tick0.price,     5300.25);
+        EXPECT_DOUBLE_EQ(tick0.quantity, 10.0);
+        EXPECT_DOUBLE_EQ(tick0.orders,    3.0);
+
+        auto tick2 = view.at(2);
+        EXPECT_EQ(tick2.timestamp, 1002ULL);
+        EXPECT_EQ(tick2.side,      Side::BUY);
+        EXPECT_EQ(tick2.level,     0U);
+        EXPECT_DOUBLE_EQ(tick2.price,     5300.50);
+        EXPECT_DOUBLE_EQ(tick2.quantity, 2.0);
+        EXPECT_DOUBLE_EQ(tick2.orders,    0.0);
+    }
+
+    // Test out-of-bounds at() throws.
+    {
+        const MarketDataView<double> view(path);
+        ASSERT_TRUE(view.valid());
+        EXPECT_THROW(view.at(3), std::out_of_range);
+    }
+
+    std::remove(path.c_str());
+}
+
 } // namespace

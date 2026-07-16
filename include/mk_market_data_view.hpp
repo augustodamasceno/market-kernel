@@ -36,6 +36,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -53,6 +54,8 @@
 
 #include "mk_market_data_mode.h"
 #include "mk_side.h"
+#include "mk_tick.hpp"
+#include "mk_utils.h"
 
 namespace marketkernel {
 
@@ -245,6 +248,47 @@ public:
      */
     [[gnu::always_inline, gnu::hot]] inline Span<Num>      orders()      const noexcept;
 
+    /**
+     * @brief Return an aggregate Tick view composed from all mapped arrays at index @p i.
+     *
+     * @details No bounds checking; index must be in [0, size()).
+     * Tick is a temporary value type, not a reference.
+     *
+     * @param i Index in [0, size()).
+     * @return Tick with all fields copied from the mapped arrays.
+     *
+     * @note Time Complexity: $O(1)$ (six array lookups).
+     */
+    [[gnu::always_inline]] inline Tick<Num> operator[](std::size_t i) const noexcept
+    {
+        return Tick<Num>{
+            ts_ptr_[i],
+            sides_ptr_[i],
+            levels_ptr_ ? levels_ptr_[i] : uint8_t{0},
+            prices_ptr_[i],
+            quantities_ptr_[i],
+            orders_ptr_[i]
+        };
+    }
+
+    /**
+     * @brief Return an aggregate Tick view at index @p i with bounds checking.
+     *
+     * @details Throws std::out_of_range if @p i >= size().
+     *
+     * @param i Index in [0, size()).
+     * @return Tick with all fields copied from the mapped arrays.
+     * @throw std::out_of_range if @p i >= size().
+     *
+     * @note Time Complexity: $O(1)$ (six array lookups).
+     */
+    inline Tick<Num> at(std::size_t i) const
+    {
+        if (i >= size())
+            throw std::out_of_range("MarketDataView::at: index out of range");
+        return (*this)[i];
+    }
+
 private:
     /**
      * @brief Release the OS mapping and reset every member to its default state.
@@ -360,7 +404,7 @@ MarketDataView<Num>::MarketDataView(const std::string& path) noexcept
     const uint8_t expected_magic[4] = {'M', 'K', 'M', 'D'};
     if (file_size < 32U
         || std::memcmp(base, expected_magic, 4) != 0
-        || base[4] != 1U
+        || base[4] != 2U
         || base[5] != static_cast<uint8_t>(sizeof(Num)))
     {
         unmap_();
@@ -375,7 +419,7 @@ MarketDataView<Num>::MarketDataView(const std::string& path) noexcept
     std::memcpy(&sym_len, base + 16, sizeof(uint64_t));
     const uint8_t has_levels = base[24];
 
-    const std::size_t data_offset  = 32U + static_cast<std::size_t>(sym_len);
+    const std::size_t data_offset  = align_up(32U + static_cast<std::size_t>(sym_len), alignof(uint64_t));
     const std::size_t levels_bytes = has_levels ? static_cast<std::size_t>(n_ticks) : 0U;
     const std::size_t expected_size =
           data_offset
@@ -406,6 +450,9 @@ MarketDataView<Num>::MarketDataView(const std::string& path) noexcept
     sides_ptr_ = reinterpret_cast<const Side*>(d);
     d         += n_ticks_ * sizeof(Side);
 
+    // Levels are stored only in ALL and LIQUIDITY modes.
+    // Both TRADE and LEVEL modes omit the level field (distinct enum values
+    // for semantic clarity; see mk_market_data_mode.h for design rationale).
     if (has_levels)
     {
         levels_ptr_ = d;

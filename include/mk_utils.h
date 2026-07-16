@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -46,7 +47,27 @@ static constexpr bool IS_LITTLE_ENDIAN = true; // MSVC only targets LE
 #endif
 
 /**
- * @brief Verify at runtime that the host byte order matches the compile-time
+ * @brief Round @p value up to the nearest multiple of @p alignment.
+ *
+ * @details Uses a single bitwise-AND mask; no division or branch is generated.
+ *
+ * @pre @p alignment must be a non-zero power of two.
+ *
+ * @param[in] value     The value to align.
+ * @param[in] alignment The required alignment boundary (must be a power of two).
+ * @return The smallest multiple of @p alignment that is >= @p value.
+ *
+ * @note Time Complexity: $O(1)$
+ * @note Space Complexity: $O(1)$
+ * @note Memory: Zero heap allocations.
+ */
+[[gnu::always_inline]] inline constexpr std::size_t align_up(
+    std::size_t value, std::size_t alignment) noexcept
+{
+    return (value + alignment - 1U) & ~(alignment - 1U);
+}
+
+/**
  *        assumption encoded in IS_LITTLE_ENDIAN.
  *
  * @details Performs a one-byte memory probe using @c std::memcpy to avoid
