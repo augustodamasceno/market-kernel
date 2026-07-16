@@ -11,15 +11,14 @@
  * @file test_mk_market_data.cpp
  * @brief Unit tests for the MarketData class.
  */
-
-#include <gtest/gtest.h>
-
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <sstream>
 #include <string>
+
+#include <gtest/gtest.h>
 
 #include "mk_market_data.hpp"
 #include "mk_utils.h"
@@ -702,6 +701,77 @@ TEST(UtilsTest, CheckEndiannessPasses)
 {
     // On the native platform, check_endianness() must not abort.
     EXPECT_NO_FATAL_FAILURE(marketkernel::check_endianness());
+}
+
+// ---------------------------------------------------------------------------
+// Tests for modes that don't store levels: verify ticks ARE stored, but
+// the level field is dropped.
+// ---------------------------------------------------------------------------
+
+TEST(MarketDataTest, LevelModeStoresTickDataButDropsLevel)
+{
+    // LEVEL mode stores timestamp, side, price, quantity, orders, but NOT level.
+    // Append a tick with level=3; it should be stored (other fields), but level dropped.
+    MarketData<double> md("es", MarketDataMode::LEVEL);
+
+    md.append(100ULL, Side::BUY, 3U, 5300.50, 10.0, 2.0);
+    md.append(101ULL, Side::SELL, 1U, 5299.00, 5.0, 1.0);
+
+    EXPECT_EQ(md.size(), 2U);
+    EXPECT_TRUE(md.levels().empty());  // levels array is empty
+
+    // But all other tick data is stored.
+    EXPECT_EQ(md.timestamps().size(), 2U);
+    EXPECT_EQ(md.sides().size(), 2U);
+    EXPECT_EQ(md.prices().size(), 2U);
+    EXPECT_EQ(md.quantities().size(), 2U);
+    EXPECT_EQ(md.orders().size(), 2U);
+
+    // Verify tick data is correct.
+    EXPECT_EQ(md.timestamps()[0], 100ULL);
+    EXPECT_EQ(md.sides()[0], Side::BUY);
+    EXPECT_DOUBLE_EQ(md.prices()[0], 5300.50);
+    EXPECT_DOUBLE_EQ(md.quantities()[0], 10.0);
+    EXPECT_DOUBLE_EQ(md.orders()[0], 2.0);
+
+    EXPECT_EQ(md.timestamps()[1], 101ULL);
+    EXPECT_EQ(md.sides()[1], Side::SELL);
+    EXPECT_DOUBLE_EQ(md.prices()[1], 5299.00);
+    EXPECT_DOUBLE_EQ(md.quantities()[1], 5.0);
+    EXPECT_DOUBLE_EQ(md.orders()[1], 1.0);
+}
+
+TEST(MarketDataTest, TradeModeStoresTickDataButDropsLevel)
+{
+    // TRADE mode: level must be 0 (any level > 0 is rejected by max_level check).
+    // Append ticks with level=0 and verify data is stored, but levels array is empty.
+    MarketData<float> md("nvda", MarketDataMode::TRADE);
+
+    md.append(200ULL, Side::BUY, 0U, 180.50F, 100.0F, 10.0F);
+    md.append(201ULL, Side::SELL, 0U, 180.25F, 50.0F, 5.0F);
+
+    EXPECT_EQ(md.size(), 2U);
+    EXPECT_TRUE(md.levels().empty());  // levels array is empty
+
+    // All other tick data is stored.
+    EXPECT_EQ(md.timestamps().size(), 2U);
+    EXPECT_EQ(md.sides().size(), 2U);
+    EXPECT_EQ(md.prices().size(), 2U);
+    EXPECT_EQ(md.quantities().size(), 2U);
+    EXPECT_EQ(md.orders().size(), 2U);
+
+    // Verify tick data is correct.
+    EXPECT_EQ(md.timestamps()[0], 200ULL);
+    EXPECT_EQ(md.sides()[0], Side::BUY);
+    EXPECT_FLOAT_EQ(md.prices()[0], 180.50F);
+    EXPECT_FLOAT_EQ(md.quantities()[0], 100.0F);
+    EXPECT_FLOAT_EQ(md.orders()[0], 10.0F);
+
+    EXPECT_EQ(md.timestamps()[1], 201ULL);
+    EXPECT_EQ(md.sides()[1], Side::SELL);
+    EXPECT_FLOAT_EQ(md.prices()[1], 180.25F);
+    EXPECT_FLOAT_EQ(md.quantities()[1], 50.0F);
+    EXPECT_FLOAT_EQ(md.orders()[1], 5.0F);
 }
 
 } // namespace
