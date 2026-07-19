@@ -14,7 +14,9 @@
 
 ## **Overview**
 
-MarketKernel provides a robust infrastructure for handling market data with modern C++ features. It is intended to be used as a base library for:
+MarketKernel provides a robust infrastructure for handling market data with modern C++ features. It supports market data and trading protocol integrations for **B3 SBE** (**UMDF** and **FIX**).
+
+It is intended to be used as a base library for:
 
 - **Indicators**: Quantitative indicators and signal generation
 - **Strategies**: Trading strategy development and backtesting
@@ -26,7 +28,8 @@ MarketKernel provides a robust infrastructure for handling market data with mode
 ## **Documentation:** 
 
 ### **Online:** [https://augustodamasceno.org/market-kernel/](https://augustodamasceno.org/market-kernel/)
-### **Offline:** [docs/index.md](docs/index.md)
+### **Offline:** [docs/index.md](docs/index.md)  
+### **SBE Codecs Generation:** [include/schemas/README.md](include/schemas/README.md)
 
 ---
 
@@ -36,6 +39,11 @@ The library is organized into **core modules** and **optional engines**:
 
 ```
 include/           — Public headers (core library, zero external dependencies)
+  └── schemas/     (auto-generated) Protocol codec headers generated from exchange schemas
+      └── b3/      B3 SBE/UMDF C++ codecs generated with SBE Tool from Aeron
+                   (see [include/schemas/README.md](include/schemas/README.md) for full documentation)
+schemas/           — Source protocol schema definitions used for code generation
+  └── b3/          B3 UMDF XML schema (`b3-market-data-messages-2.3.1.xml`)
 src/               — Implementation files (core library)
 tests/             — Unit tests for core modules
 engines/           — Third-party integrations and specialized computational engines (optional)

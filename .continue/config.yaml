@@ -9,6 +9,7 @@ files:
   required:
     - instructions.md
     - project-instructions.md
+    - lowlatency.md
 
 project_instructions:
   file: project-instructions.md

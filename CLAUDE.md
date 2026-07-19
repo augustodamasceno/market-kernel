@@ -7,6 +7,7 @@
 ### Files to read
 - `instructions.md`
 - `project-instructions.md`
+- `lowlatency.md`
 
 ### Language-specific files to read
 *(Keep only the languages used in this project. See README for the full list of available files.)*
