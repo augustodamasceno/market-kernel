@@ -24,17 +24,16 @@
  * - Memory ordering correctness (acquire/release semantics)
  * - No data races under ThreadSanitizer and MemorySanitizer
  *
- * All tests execute in <100ms on modern hardware; designed for CI/CD pipelines
- * and continuous validation during development.
+ * All tests execute in <3ms for ProducerConsumerConcurrent and <170us for the remaining.
  */
 
 #include "mk_ring_buffer.hpp"
+#include "test_utils.hpp"
 
 #include <gtest/gtest.h>
 
 #include <atomic>
 #include <thread>
-#include <vector>
 
 namespace marketkernel::test
 {
@@ -289,3 +288,26 @@ TEST_F(RingBufferTest, CacheLineAlignmentNoConcurrencyIssues)
 }
 
 }  // namespace marketkernel::test
+
+/**
+ * @brief Custom main entry point to register nanosecond-precision test listener.
+ *
+ * @details
+ * Registers NanosecondTestListener to capture high-resolution timing for each test.
+ * This is necessary because Google Test's default listener reports millisecond precision,
+ * which is insufficient for ultra-low-latency performance validation.
+ *
+ * @return EXIT_SUCCESS if all tests pass, EXIT_FAILURE otherwise.
+ */
+int main(int argc, char** argv)
+{
+    testing::InitGoogleTest(&argc, argv);
+    
+    // Register custom nanosecond-precision listener
+    auto* listener = new marketkernel::test::NanosecondTestListener();
+    testing::TestEventListeners& listeners = 
+        testing::UnitTest::GetInstance()->listeners();
+    listeners.Append(listener);
+    
+    return RUN_ALL_TESTS();
+}

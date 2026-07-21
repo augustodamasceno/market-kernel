@@ -22,6 +22,7 @@
 
 #include "mk_market_data.hpp"
 #include "mk_utils.h"
+#include "test_utils.hpp"
 
 namespace {
 
@@ -775,3 +776,15 @@ TEST(MarketDataTest, TradeModeStoresTickDataButDropsLevel)
 }
 
 } // namespace
+
+int main(int argc, char** argv)
+{
+    testing::InitGoogleTest(&argc, argv);
+    
+    auto* listener = new marketkernel::test::NanosecondTestListener();
+    testing::TestEventListeners& listeners = 
+        testing::UnitTest::GetInstance()->listeners();
+    listeners.Append(listener);
+    
+    return RUN_ALL_TESTS();
+}

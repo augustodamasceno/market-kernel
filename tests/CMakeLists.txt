@@ -22,19 +22,24 @@ FetchContent_MakeAvailable(googletest)
 add_executable(test_mk_market_data test_mk_market_data.cpp)
 add_executable(test_mk_math test_mk_math.cpp)
 add_executable(test_mk_market_data_view test_mk_market_data_view.cpp)
+add_executable(test_mk_ring_buffer test_mk_ring_buffer.cpp)
 
 # 4. Linkage (Prefer GTest::gmock if you need mocking later)
 target_link_libraries(test_mk_market_data PRIVATE
     marketkernel_lib
-    GTest::gtest_main
+    GTest::gtest
 )
 target_link_libraries(test_mk_math PRIVATE
     marketkernel_lib
-    GTest::gtest_main
+    GTest::gtest
 )
 target_link_libraries(test_mk_market_data_view PRIVATE
     marketkernel_lib
-    GTest::gtest_main
+    GTest::gtest
+)
+target_link_libraries(test_mk_ring_buffer PRIVATE
+    marketkernel_lib
+    GTest::gtest
 )
 
 # 5. Compiler Warnings & Features
@@ -45,9 +50,12 @@ target_compile_features(test_mk_math PRIVATE cxx_std_17)
 target_compile_options(test_mk_math PRIVATE -Wall -Wextra -Wpedantic -Werror)
 target_compile_features(test_mk_market_data_view PRIVATE cxx_std_17)
 target_compile_options(test_mk_market_data_view PRIVATE -Wall -Wextra -Wpedantic -Werror)
+target_compile_features(test_mk_ring_buffer PRIVATE cxx_std_17)
+target_compile_options(test_mk_ring_buffer PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 # 6. Test Discovery
 include(GoogleTest)
 gtest_discover_tests(test_mk_market_data)
 gtest_discover_tests(test_mk_math)
 gtest_discover_tests(test_mk_market_data_view)
+gtest_discover_tests(test_mk_ring_buffer)
