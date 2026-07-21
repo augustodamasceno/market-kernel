@@ -14,7 +14,8 @@
 
 ## **Overview**
 
-MarketKernel provides a robust infrastructure for handling market data with modern C++ features. It supports market data and trading protocol integrations for **B3 SBE** (**UMDF** and **FIX**).
+MarketKernel provides a robust infrastructure for handling market data with modern C++ features.  
+It supports market data and trading protocol integrations for **B3 SBE** (**UMDF** and **FIX**).
 
 It is intended to be used as a base library for:
 
@@ -30,6 +31,7 @@ It is intended to be used as a base library for:
 ### **Online:** [https://augustodamasceno.org/market-kernel/](https://augustodamasceno.org/market-kernel/)
 ### **Offline:** [docs/index.md](docs/index.md)  
 ### **SBE Codecs Generation:** [include/schemas/README.md](include/schemas/README.md)
+### **Network IP Configuration and Market Data Feed Endpoints:** [include/mk_ips.hpp](include/mk_ips.hpp)
 
 ---
 
@@ -38,21 +40,19 @@ It is intended to be used as a base library for:
 The library is organized into **core modules** and **optional engines**:
 
 ```
-include/           — Public headers (core library, zero external dependencies)
-  └── schemas/     (auto-generated) Protocol codec headers generated from exchange schemas
-      └── b3/      B3 SBE/UMDF C++ codecs generated with SBE Tool from Aeron
-                   (see [include/schemas/README.md](include/schemas/README.md) for full documentation)
-schemas/           — Source protocol schema definitions used for code generation
-  └── b3/          B3 UMDF XML schema (`b3-market-data-messages-2.3.1.xml`)
-src/               — Implementation files (core library)
-tests/             — Unit tests for core modules
-engines/           — Third-party integrations and specialized computational engines (optional)
-  ├── neural/      (optional) Neural networks via LibTorch
-  ├── genetics/    (optional) Genetic algorithms via PyGAD
-  └── fuzzy/       (optional) Fuzzy logic inference
+include/           — Core Headers
+  └── schemas/     ── Protocol codecs auto-generated from exchange schemas
+      └── b3/      ─── B3 SBE/UMDF C++ codecs generated with SBE Tool from Aeron
+                   ─── B3 UMDF XML schema
+src/               — Core Implementations
+tests/             — Core Tests
+engines/           — Third-party integrations and specialized computational engines
+  ├── neural/      ── Neural networks via LibTorch
+  ├── genetics/    ── Genetic algorithms via PyGAD
+  └── fuzzy/       ── Fuzzy logic inference
 examples/          — Example code and usage demonstrations
-  ├── core/        Examples using core library only
-  └── engines/     Examples using optional engines
+  ├── core/     
+  └── engines/
 ```
 
 **Design principle:** The core library is dependency-free and fully functional standalone. AI/ML frameworks, external computational engines, and specialized third-party integrations are isolated in `engines/` and can be optionally enabled at build time.
